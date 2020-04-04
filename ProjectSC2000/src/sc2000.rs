@@ -103,6 +103,39 @@ fn generate_ek(key: u128) {
     uk[6] = uk[2];
     uk[5] = uk[1];
     uk[4] = uk[0];
+    let mut aa: [u32; 3] = [0; 3];
+    let mut bb: [u32; 3] = [0; 3];
+    let mut cc: [u32; 3] = [0; 3];
+    let mut dd: [u32; 3] = [0; 3];
+    for i in 0..3 {
+        aa[i as usize] = wf(4 * i, uk[0], uk[1], i + 1);
+        bb[i as usize] = wf(4 * i + 1, uk[2], uk[3], i + 1);
+        cc[i as usize] = wf(4 * i + 2, uk[4], uk[5], i + 1);
+        dd[i as usize] = wf(4 * i + 3, uk[6], uk[7], i + 1);
+    }
+    for n in 0..56 {
+        let u = n % 9;
+        let v = (n + n / 36) % 12;
+        let x = INDEX[0][u];
+        let y = INDEX[1][u];
+        let z = INDEX[2][u];
+        let w = INDEX[3][u];
+        match v {
+            0 => ek[n] = gf(aa[x], bb[y], cc[z], dd[w]),
+            1 => ek[n] = gf(bb[x], aa[y], dd[z], cc[w]),
+            2 => ek[n] = gf(cc[x], dd[y], aa[z], bb[w]),
+            3 => ek[n] = gf(dd[x], cc[y], bb[z], aa[w]),
+            4 => ek[n] = gf(aa[x], cc[y], dd[z], bb[w]),
+            5 => ek[n] = gf(bb[x], dd[y], cc[z], aa[w]),
+            6 => ek[n] = gf(cc[x], aa[y], bb[z], dd[w]),
+            7 => ek[n] = gf(dd[x], bb[y], aa[z], cc[w]),
+            8 => ek[n] = gf(aa[x], dd[y], bb[z], cc[w]),
+            9 => ek[n] = gf(bb[x], cc[y], aa[z], dd[w]),
+            10 => ek[n] = gf(cc[x], bb[y], dd[z], aa[w]),
+            11 => ek[n] = gf(dd[x], aa[y], cc[z], bb[w]),
+            _ => {}
+        }
+    }
 }
 
 static mut EK: [u32; 56] = [0; 56];
