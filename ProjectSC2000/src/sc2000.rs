@@ -94,7 +94,15 @@ fn bits_at(x: u32, i1: u32, i2: u32) -> u32 {
 }
 
 fn generate_ek(key: u128) {
-    
+    let mut uk: [u32; 8] = [0; 8];
+    uk[3] = (key & 0xffffffff) as u32;
+    uk[2] = ((key >> 8) & 0xffffffff) as u32;
+    uk[1] = ((key >> 16) & 0xffffffff) as u32;
+    uk[0] = ((key >> 24) & 0xffffffff) as u32;
+    uk[7] = uk[3];
+    uk[6] = uk[2];
+    uk[5] = uk[1];
+    uk[4] = uk[0];
 }
 
 static mut EK: [u32; 56] = [0; 56];
