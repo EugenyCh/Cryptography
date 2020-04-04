@@ -93,8 +93,8 @@ fn bits_at(x: u32, i1: u32, i2: u32) -> u32 {
     (x >> (31 - i2)) & !(!0 << (i2 - i1 + 1))
 }
 
-fn generate_ek(key: u128) {
-    let mut uk: [u32; 8] = [0; 8];
+fn generate_ek(key: u128) -> [u32; 56] {
+    let mut uk = [0u32; 8];
     uk[3] = (key & 0xffffffff) as u32;
     uk[2] = ((key >> 8) & 0xffffffff) as u32;
     uk[1] = ((key >> 16) & 0xffffffff) as u32;
@@ -103,16 +103,17 @@ fn generate_ek(key: u128) {
     uk[6] = uk[2];
     uk[5] = uk[1];
     uk[4] = uk[0];
-    let mut aa: [u32; 3] = [0; 3];
-    let mut bb: [u32; 3] = [0; 3];
-    let mut cc: [u32; 3] = [0; 3];
-    let mut dd: [u32; 3] = [0; 3];
+    let mut aa = [0u32; 3];
+    let mut bb = [0u32; 3];
+    let mut cc = [0u32; 3];
+    let mut dd = [0u32; 3];
     for i in 0..3 {
         aa[i as usize] = wf(4 * i, uk[0], uk[1], i + 1);
         bb[i as usize] = wf(4 * i + 1, uk[2], uk[3], i + 1);
         cc[i as usize] = wf(4 * i + 2, uk[4], uk[5], i + 1);
         dd[i as usize] = wf(4 * i + 3, uk[6], uk[7], i + 1);
     }
+    let mut ek = [0u32; 56];
     for n in 0..56 {
         let u = n % 9;
         let v = (n + n / 36) % 12;
@@ -136,9 +137,8 @@ fn generate_ek(key: u128) {
             _ => {}
         }
     }
+    ek
 }
-
-static mut EK: [u32; 56] = [0; 56];
 
 static M: [u32; 32] = [
     0xd0c19225, 0xa5a2240a, 0x1b84d250, 0xb728a4a1,
