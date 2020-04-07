@@ -1,3 +1,6 @@
+use std::io::prelude::*;
+use std::fs::File;
+
 fn lf(a: u32, b: u32, mask: u32) -> (u32, u32) {
     (b ^ (a & mask), a ^ (b & !mask))
 }
@@ -141,7 +144,53 @@ fn generate_ek(key: u128) -> [u32; 56] {
 }
 
 pub fn encode(name: String, key: u128) {
-
+    let mut ek = generate_ek(key);
+    let mut f = File::open(name)?;
+    let mut fo = File::create(name + ".en")?;
+    let mut buffer = [0; 16];
+    loop {
+        let n = f.read(&mut buffer[..])?;
+        match n {
+            0 => break,
+            1...15 => (),
+            _ => {
+                let mut c0 = 0x55555555u32;
+                let mut c1 = 0x33333333u32;
+                let mut e = ((buffer[0] as u32) << 24) | ((buffer[1] as u32) << 16) | ((buffer[2] as u32) << 8) | buffer[3] as u32;
+                let mut f = ((buffer[4] as u32) << 24) | ((buffer[5] as u32) << 16) | ((buffer[6] as u32) << 8) | buffer[7] as u32;
+                let mut g = ((buffer[8] as u32) << 24) | ((buffer[9] as u32) << 16) | ((buffer[10] as u32) << 8) | buffer[11] as u32;
+                let mut h = ((buffer[12] as u32) << 24) | ((buffer[13] as u32) << 16) | ((buffer[14] as u32) << 8) | buffer[15] as u32;
+                for i in 0..6 {
+                    (e, f, g, h) = (e ^ ek[8 * i], f ^ ek[8 * i + 1], g ^ ek[8 * i + 2], h ^ ek[8 * i + 3]);
+                    (e, f, g, h) = bf(e, f, g, h);
+                    (e, f, g, h) = (e ^ ek[8 * i + 4], f ^ ek[8 * i + 5], g ^ ek[8 * i + 6], h ^ ek[8 * i + 7]);
+                    (e, f, g, h) = rf(e, f, g, h, c0);
+                    (c0, c1) = (c1, c0);
+                }
+                (e, f, g, h) = (e ^ ek[48], f ^ ek[49], g ^ ek[50], h ^ ek[51]);
+                (e, f, g, h) = bf(e, f, g, h);
+                (e, f, g, h) = (e ^ ek[52], f ^ ek[53], g ^ ek[54], h ^ ek[55]);
+                let mut out_buffer = [0; 16];
+                out_buffer[0] = (e >> 24) as u8;
+                out_buffer[1] = (e >> 16) as u8;
+                out_buffer[2] = (e >> 8) as u8;
+                out_buffer[3] = e as u8;
+                out_buffer[4] = (f >> 24) as u8;
+                out_buffer[5] = (f >> 16) as u8;
+                out_buffer[6] = (f >> 8) as u8;
+                out_buffer[7] = f as u8;
+                out_buffer[8] = (g >> 24) as u8;
+                out_buffer[9] = (g >> 16) as u8;
+                out_buffer[10] = (g >> 8) as u8;
+                out_buffer[11] = g as u8;
+                out_buffer[12] = (h >> 24) as u8;
+                out_buffer[13] = (h >> 16) as u8;
+                out_buffer[14] = (h >> 8) as u8;
+                out_buffer[15] = h as u8;
+                fo.write(&out_buffer);
+            }
+        }
+    }
 }
 
 static M: [u32; 32] = [

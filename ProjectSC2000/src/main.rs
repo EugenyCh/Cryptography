@@ -6,7 +6,7 @@ use std::process::abort;
 
 fn main() {
     let mut key = String::new();
-    let file = Ini::load_from_file("input.ini").unwrap();
+    let file = Ini::load_from_file("input.ini")?;
     let mut input_name = String::new();
     let mut mode = String::new();
     for (sec, prop) in file.iter() {
@@ -31,7 +31,7 @@ fn main() {
             };
         }
     }
-    let mut key = u128::from_str_radix(&key, 16).unwrap();
+    let mut key = u128::from_str_radix(&key, 16)?;
     println!("Encoding");
     encode(input_name, key);
 }
