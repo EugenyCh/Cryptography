@@ -1,6 +1,6 @@
 mod sc2000;
 
-use sc2000::encode;
+use sc2000::*;
 use ini::Ini;
 use std::process::abort;
 
@@ -32,6 +32,15 @@ fn main() {
         }
     }
     let key = u128::from_str_radix(&key, 16).unwrap();
-    println!("Encoding");
-    encode(&input_name, key);
+    match mode.as_str() {
+        "encoding" => {
+            println!("Encoding of {}", input_name);
+            encode(&input_name, key);
+        },
+        "decoding" => {
+            println!("Decoding of {}", input_name);
+            decode(&input_name, key);
+        },
+        _ => {}
+    }
 }
