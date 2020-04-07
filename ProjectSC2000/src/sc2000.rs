@@ -143,33 +143,41 @@ fn generate_ek(key: u128) -> [u32; 56] {
     ek
 }
 
-pub fn encode(name: String, key: u128) {
-    let mut ek = generate_ek(key);
-    let mut f = File::open(name)?;
-    let mut fo = File::create(name + ".en")?;
+pub fn encode(name: &str, key: u128) {
+    let ek = generate_ek(key);
+    let mut f = File::open(name).unwrap();
+    let mut fo = File::create(format!("./{}.en", name)).unwrap();
     let mut buffer = [0; 16];
     loop {
-        let n = f.read(&mut buffer[..])?;
+        let n = f.read(&mut buffer[..]).unwrap();
         match n {
             0 => break,
-            1...15 => (),
+            1..=15 => (),
             _ => {
                 let mut c0 = 0x55555555u32;
                 let mut c1 = 0x33333333u32;
-                let mut e = ((buffer[0] as u32) << 24) | ((buffer[1] as u32) << 16) | ((buffer[2] as u32) << 8) | buffer[3] as u32;
-                let mut f = ((buffer[4] as u32) << 24) | ((buffer[5] as u32) << 16) | ((buffer[6] as u32) << 8) | buffer[7] as u32;
-                let mut g = ((buffer[8] as u32) << 24) | ((buffer[9] as u32) << 16) | ((buffer[10] as u32) << 8) | buffer[11] as u32;
-                let mut h = ((buffer[12] as u32) << 24) | ((buffer[13] as u32) << 16) | ((buffer[14] as u32) << 8) | buffer[15] as u32;
+                let mut e0 = ((buffer[0] as u32) << 24) | ((buffer[1] as u32) << 16) | ((buffer[2] as u32) << 8) | buffer[3] as u32;
+                let mut f0 = ((buffer[4] as u32) << 24) | ((buffer[5] as u32) << 16) | ((buffer[6] as u32) << 8) | buffer[7] as u32;
+                let mut g0 = ((buffer[8] as u32) << 24) | ((buffer[9] as u32) << 16) | ((buffer[10] as u32) << 8) | buffer[11] as u32;
+                let mut h0 = ((buffer[12] as u32) << 24) | ((buffer[13] as u32) << 16) | ((buffer[14] as u32) << 8) | buffer[15] as u32;
                 for i in 0..6 {
-                    (e, f, g, h) = (e ^ ek[8 * i], f ^ ek[8 * i + 1], g ^ ek[8 * i + 2], h ^ ek[8 * i + 3]);
-                    (e, f, g, h) = bf(e, f, g, h);
-                    (e, f, g, h) = (e ^ ek[8 * i + 4], f ^ ek[8 * i + 5], g ^ ek[8 * i + 6], h ^ ek[8 * i + 7]);
-                    (e, f, g, h) = rf(e, f, g, h, c0);
-                    (c0, c1) = (c1, c0);
+                    let (e, f, g, h) = (e0, f0, g0, h0);
+                    let (e, f, g, h) = (e ^ ek[8 * i], f ^ ek[8 * i + 1], g ^ ek[8 * i + 2], h ^ ek[8 * i + 3]);
+                    let (e, f, g, h) = bf(e, f, g, h);
+                    let (e, f, g, h) = (e ^ ek[8 * i + 4], f ^ ek[8 * i + 5], g ^ ek[8 * i + 6], h ^ ek[8 * i + 7]);
+                    let (e, f, g, h) = rf(e, f, g, h, c0);
+                    e0 = e;
+                    f0 = f;
+                    g0 = g;
+                    h0 = h;
+                    let t = c0;
+                    c0 = c1;
+                    c1 = t;
                 }
-                (e, f, g, h) = (e ^ ek[48], f ^ ek[49], g ^ ek[50], h ^ ek[51]);
-                (e, f, g, h) = bf(e, f, g, h);
-                (e, f, g, h) = (e ^ ek[52], f ^ ek[53], g ^ ek[54], h ^ ek[55]);
+                let (e, f, g, h) = (e0, f0, g0, h0);
+                let (e, f, g, h) = (e ^ ek[48], f ^ ek[49], g ^ ek[50], h ^ ek[51]);
+                let (e, f, g, h) = bf(e, f, g, h);
+                let (e, f, g, h) = (e ^ ek[52], f ^ ek[53], g ^ ek[54], h ^ ek[55]);
                 let mut out_buffer = [0; 16];
                 out_buffer[0] = (e >> 24) as u8;
                 out_buffer[1] = (e >> 16) as u8;
@@ -187,7 +195,7 @@ pub fn encode(name: String, key: u128) {
                 out_buffer[13] = (h >> 16) as u8;
                 out_buffer[14] = (h >> 8) as u8;
                 out_buffer[15] = h as u8;
-                fo.write(&out_buffer);
+                //fo.write(&out_buffer);
             }
         }
     }
