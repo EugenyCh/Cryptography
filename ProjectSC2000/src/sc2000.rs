@@ -1,127 +1,132 @@
-#![feature(wrapping_int_impl)]
-
 use std::io::prelude::*;
 use std::fs::File;
 use std::num::Wrapping;
 
-fn lf(a: Wrapping<u32>, b: Wrapping<u32>, mask: Wrapping<u32>) -> (Wrapping<u32>, Wrapping<u32>) {
+fn lf(a: u32, b: u32, mask: u32) -> (u32, u32) {
     (b ^ (a & mask), a ^ (b & !mask))
 }
 
-fn mf(a: Wrapping<u32>) -> Wrapping<u32> {
-    let mut b = Wrapping(0u32);
+fn mf(a: u32) -> u32 {
+    let mut b: u32 = 0;
     for i in 0..32 {
         if bit_at(a, i) == 1 {
-            b = b ^ Wrapping(M[i as usize]);
+            b = b ^ M[i as usize];
         }
     }
     b
 }
 
-fn sf(a: Wrapping<u32>) -> Wrapping<u32> {
+fn sf(a: u32) -> u32 {
     let i1 = bits_at(a, 0, 5);
     let i2 = bits_at(a, 6, 10);
     let i3 = bits_at(a, 11, 15);
     let i4 = bits_at(a, 16, 20);
     let i5 = bits_at(a, 21, 25);
     let i6 = bits_at(a, 26, 31);
-    let s1 = Wrapping(S6[i1 as usize]) << 26;
-    let s2 = Wrapping(S5[i2 as usize]) << 21;
-    let s3 = Wrapping(S5[i3 as usize]) << 16;
-    let s4 = Wrapping(S5[i4 as usize]) << 11;
-    let s5 = Wrapping(S5[i5 as usize]) << 6;
-    let s6 = Wrapping(S6[i6 as usize]);
+    let s1 = S6[i1 as usize] << 26;
+    let s2 = S5[i2 as usize] << 21;
+    let s3 = S5[i3 as usize] << 16;
+    let s4 = S5[i4 as usize] << 11;
+    let s5 = S5[i5 as usize] << 6;
+    let s6 = S6[i6 as usize];
     s1 | s2 | s3 | s4 | s5 | s6
 }
 
-fn ff(a: Wrapping<u32>, b: Wrapping<u32>, mask: Wrapping<u32>) -> (Wrapping<u32>, Wrapping<u32>) {
+fn ff(a: u32, b: u32, mask: u32) -> (u32, u32) {
     lf(mf(sf(a)), mf(sf(b)), mask)
 }
 
-fn rf(a: Wrapping<u32>, b: Wrapping<u32>, c: Wrapping<u32>, d: Wrapping<u32>, mask: Wrapping<u32>) -> (Wrapping<u32>, Wrapping<u32>, Wrapping<u32>, Wrapping<u32>) {
+fn rf(a: u32, b: u32, c: u32, d: u32, mask: u32) -> (u32, u32, u32, u32) {
     let (s, t) = ff(c, d, mask);
-    let (g, h) = ((a ^ s) as Wrapping<u32>, (b ^ t) as Wrapping<u32>);
+    let (g, h) = (a ^ s, b ^ t);
     let (s, t) = ff(g, h, mask);
-    let (e, f) = ((c ^ s) as Wrapping<u32>, (d ^ t) as Wrapping<u32>);
+    let (e, f) = (c ^ s, d ^ t);
     (e, f, g, h)
 }
 
-fn bf(a: Wrapping<u32>, b: Wrapping<u32>, c: Wrapping<u32>, d: Wrapping<u32>) -> (Wrapping<u32>, Wrapping<u32>, Wrapping<u32>, Wrapping<u32>) {
+fn bf(a: u32, b: u32, c: u32, d: u32) -> (u32, u32, u32, u32) {
     bf_helper(a, b, c, d, false)
 }
 
-fn bf_1(a: Wrapping<u32>, b: Wrapping<u32>, c: Wrapping<u32>, d: Wrapping<u32>) -> (Wrapping<u32>, Wrapping<u32>, Wrapping<u32>, Wrapping<u32>) {
+fn bf_1(a: u32, b: u32, c: u32, d: u32) -> (u32, u32, u32, u32) {
     bf_helper(a, b, c, d, true)
 }
 
-fn bf_helper(a: Wrapping<u32>, b: Wrapping<u32>, c: Wrapping<u32>, d: Wrapping<u32>, r: bool) -> (Wrapping<u32>, Wrapping<u32>, Wrapping<u32>, Wrapping<u32>) {
-    let mut e = Wrapping(0u32);
-    let mut f = Wrapping(0u32);
-    let mut g = Wrapping(0u32);
-    let mut h = Wrapping(0u32);
+fn bf_helper(a: u32, b: u32, c: u32, d: u32, r: bool) -> (u32, u32, u32, u32) {
+    let mut e = 0;
+    let mut f = 0;
+    let mut g = 0;
+    let mut h = 0;
     for i in 0..32 {
-        let mut x = Wrapping(0u32);
-        x |= Wrapping(bit_at(a, i)) << 3;
-        x |= Wrapping(bit_at(b, i)) << 2;
-        x |= Wrapping(bit_at(c, i)) << 1;
-        x |= Wrapping(bit_at(d, i));
+        let mut x: u32 = 0;
+        x |= bit_at(a, i) << 3;
+        x |= bit_at(b, i) << 2;
+        x |= bit_at(c, i) << 1;
+        x |= bit_at(d, i);
         x = match r {
-            false => Wrapping(S4[x.0 as usize]),
-            true => Wrapping(S4_1[x.0 as usize])
+            false => S4[x as usize],
+            true => S4_1[x as usize]
         };
-        e |= (x >> 3) << (31 - i as usize);
-        f |= (x >> 2) << (31 - i as usize);
-        g |= (x >> 1) << (31 - i as usize);
-        h |= x << (31 - i as usize);
+        e |= (x >> 3) << (31 - i);
+        f |= (x >> 2) << (31 - i);
+        g |= (x >> 1) << (31 - i);
+        h |= x << (31 - i);
     }
     (e, f, g, h)
 }
 
-fn gf(a: Wrapping<u32>, b: Wrapping<u32>, c: Wrapping<u32>, d: Wrapping<u32>) -> Wrapping<u32> {
-    (rol1(a) + b) ^ rol1(rol1(c) - d)
+fn gf(a: u32, b: u32, c: u32, d: u32) -> u32 {
+    (
+        (Wrapping(rol1(a)) + Wrapping(b)).0
+    ) ^ rol1(
+        (Wrapping(rol1(c)) - Wrapping(d)).0
+    )
 }
 
-fn wf(a: Wrapping<u32>, b: Wrapping<u32>, c: Wrapping<u32>, d: Wrapping<u32>) -> Wrapping<u32> {
-    mf(sf((mf(sf(a)) + mf(sf(b))) ^ (mf(sf(c)) * d)))
+fn wf(a: u32, b: u32, c: u32, d: u32) -> u32 {
+    mf(sf((
+        (Wrapping(mf(sf(a))) + Wrapping(mf(sf(b)))).0
+    ) ^ (
+        (Wrapping(mf(sf(c))) * Wrapping(d)).0
+    )))
 }
 
-fn rol1(x: Wrapping<u32>) -> Wrapping<u32> {
-    Wrapping(x.0.rotate_left(1))
+fn rol1(x: u32) -> u32 {
+    x.rotate_left(1)
 }
 
 // x = x_0 || x_1 || x_2 || ... || x_31
-fn bit_at(x: Wrapping<u32>, i: u32) -> u32 {
+fn bit_at(x: u32, i: u32) -> u32 {
     (x >> (31 - i)) & 1
 }
 
 // x = x_0 || x_1 || x_2 || ... || x_31
-fn bits_at(x: Wrapping<u32>, i1: u32, i2: u32) -> u32 {
+fn bits_at(x: u32, i1: u32, i2: u32) -> u32 {
     (x >> (31 - i2)) & !(!0 << (i2 - i1 + 1))
 }
 
-fn generate_ek(key: u128) -> [Wrapping<u32>; 56] {
-    let mut key = Wrapping(key);
-    let mut uk = [Wrapping(0u32); 8];
-    uk[3] = key & 0xffffffff;
-    uk[2] = (key >> 8) & 0xffffffff;
-    uk[1] = (key >> 16) & 0xffffffff;
-    uk[0] = (key >> 24) & 0xffffffff;
+fn generate_ek(key: u128) -> [u32; 56] {
+    let mut uk = [0u32; 8];
+    uk[3] = (key & 0xffffffff) as u32;
+    uk[2] = ((key >> 8) & 0xffffffff) as u32;
+    uk[1] = ((key >> 16) & 0xffffffff) as u32;
+    uk[0] = ((key >> 24) & 0xffffffff) as u32;
     uk[7] = uk[3];
     uk[6] = uk[2];
     uk[5] = uk[1];
     uk[4] = uk[0];
-    let mut aa = [Wrapping(0u32); 3];
-    let mut bb = [Wrapping(0u32); 3];
-    let mut cc = [Wrapping(0u32); 3];
-    let mut dd = [Wrapping(0u32); 3];
-    for i in Wrapping(0..3) {
+    let mut aa = [0u32; 3];
+    let mut bb = [0u32; 3];
+    let mut cc = [0u32; 3];
+    let mut dd = [0u32; 3];
+    for i in 0..3 {
         aa[i as usize] = wf(4 * i, uk[0], uk[1], i + 1);
         bb[i as usize] = wf(4 * i + 1, uk[2], uk[3], i + 1);
         cc[i as usize] = wf(4 * i + 2, uk[4], uk[5], i + 1);
         dd[i as usize] = wf(4 * i + 3, uk[6], uk[7], i + 1);
     }
-    let mut ek = [Wrapping(0u32); 56];
-    for n in Wrapping(0..56) {
+    let mut ek = [0u32; 56];
+    for n in 0..56 {
         let u = n % 9;
         let v = (n + n / 36) % 12;
         let x = INDEX[0][u];
@@ -158,25 +163,17 @@ pub fn encode(name: &str, key: u128) {
             0 => break,
             1..=15 => (),
             _ => {
-                let mut c0 = Wrapping(0x55555555u32);
-                let mut c1 = Wrapping(0x33333333u32);
-                let mut e0: Wrapping<u32> = ((buffer[0] as Wrapping<u32>) << 24) | ((buffer[1] as Wrapping<u32>) << 16) | ((buffer[2] as Wrapping<u32>) << 8) | buffer[3] as Wrapping<u32>;
-                let mut f0: Wrapping<u32> = ((buffer[4] as Wrapping<u32>) << 24) | ((buffer[5] as Wrapping<u32>) << 16) | ((buffer[6] as Wrapping<u32>) << 8) | buffer[7] as Wrapping<u32>;
-                let mut g0: Wrapping<u32> = ((buffer[8] as Wrapping<u32>) << 24) | ((buffer[9] as Wrapping<u32>) << 16) | ((buffer[10] as Wrapping<u32>) << 8) | buffer[11] as Wrapping<u32>;
-                let mut h0: Wrapping<u32> = ((buffer[12] as Wrapping<u32>) << 24) | ((buffer[13] as Wrapping<u32>) << 16) | ((buffer[14] as Wrapping<u32>) << 8) | buffer[15] as Wrapping<u32>;
+                let mut c0 = 0x55555555u32;
+                let mut c1 = 0x33333333u32;
+                let mut e0 = ((buffer[0] as u32) << 24) | ((buffer[1] as u32) << 16) | ((buffer[2] as u32) << 8) | buffer[3] as u32;
+                let mut f0 = ((buffer[4] as u32) << 24) | ((buffer[5] as u32) << 16) | ((buffer[6] as u32) << 8) | buffer[7] as u32;
+                let mut g0 = ((buffer[8] as u32) << 24) | ((buffer[9] as u32) << 16) | ((buffer[10] as u32) << 8) | buffer[11] as u32;
+                let mut h0 = ((buffer[12] as u32) << 24) | ((buffer[13] as u32) << 16) | ((buffer[14] as u32) << 8) | buffer[15] as u32;
                 for i in 0..6 {
                     let (e, f, g, h) = (e0, f0, g0, h0);
-                    let (e, f, g, h) = (
-                        (e ^ ek[8 * i]) as Wrapping<u32>,
-                        (f ^ ek[8 * i + 1]) as Wrapping<u32>,
-                        (g ^ ek[8 * i + 2]) as Wrapping<u32>,
-                        (h ^ ek[8 * i + 3]) as Wrapping<u32>);
+                    let (e, f, g, h) = (e ^ ek[8 * i], f ^ ek[8 * i + 1], g ^ ek[8 * i + 2], h ^ ek[8 * i + 3]);
                     let (e, f, g, h) = bf(e, f, g, h);
-                    let (e, f, g, h) = (
-                        (e ^ ek[8 * i + 4]) as Wrapping<u32>,
-                        (f ^ ek[8 * i + 5]) as Wrapping<u32>,
-                        (g ^ ek[8 * i + 6]) as Wrapping<u32>,
-                        (h ^ ek[8 * i + 7]) as Wrapping<u32>);
+                    let (e, f, g, h) = (e ^ ek[8 * i + 4], f ^ ek[8 * i + 5], g ^ ek[8 * i + 6], h ^ ek[8 * i + 7]);
                     let (e, f, g, h) = rf(e, f, g, h, c0);
                     e0 = e;
                     f0 = f;
@@ -187,17 +184,9 @@ pub fn encode(name: &str, key: u128) {
                     c1 = t;
                 }
                 let (e, f, g, h) = (e0, f0, g0, h0);
-                let (e, f, g, h) = (
-                    (e ^ ek[48]) as Wrapping<u32>,
-                    (f ^ ek[49]) as Wrapping<u32>,
-                    (g ^ ek[50]) as Wrapping<u32>,
-                    (h ^ ek[51]) as Wrapping<u32>);
+                let (e, f, g, h) = (e ^ ek[48], f ^ ek[49], g ^ ek[50], h ^ ek[51]);
                 let (e, f, g, h) = bf(e, f, g, h);
-                let (e, f, g, h) = (
-                    (e ^ ek[52]) as Wrapping<u32>,
-                    (f ^ ek[53]) as Wrapping<u32>,
-                    (g ^ ek[54]) as Wrapping<u32>,
-                    (h ^ ek[55]) as Wrapping<u32>);
+                let (e, f, g, h) = (e ^ ek[52], f ^ ek[53], g ^ ek[54], h ^ ek[55]);
                 let mut out_buffer = [0; 16];
                 out_buffer[0] = (e >> 24) as u8;
                 out_buffer[1] = (e >> 16) as u8;
