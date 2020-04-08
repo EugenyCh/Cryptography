@@ -166,7 +166,7 @@ fn make_one_imkey(k1: u32, k2: u32, i: u32, j: u32) -> u32 {
     return mf(sf(ka));
 }
 
-fn make_imkeys(ukey: u128) -> [[u32; 3]; 4]  {
+fn make_imkeys(ukey: u128) -> [[u32; 3]; 4] {
     let k1 = ((ukey >> 96) & 0xffffffff) as u32;
     let k2 = ((ukey >> 64) & 0xffffffff) as u32;
     let k3 = ((ukey >> 32) & 0xffffffff) as u32;
@@ -176,7 +176,7 @@ fn make_imkeys(ukey: u128) -> [[u32; 3]; 4]  {
     let k7 = k3;
     let k8 = k4;
 
-    let mut imkey = [[u32; 3]; 4];
+    let mut imkey = [[0u32; 3]; 4];
     for i in 0..3 {
         imkey[_A_][i as usize] = make_one_imkey(k1, k2, i, 0);
         imkey[_B_][i as usize] = make_one_imkey(k3, k4, i, 1);
@@ -186,11 +186,13 @@ fn make_imkeys(ukey: u128) -> [[u32; 3]; 4]  {
     imkey
 }
 
-fn make_one_ekey(imkey: [[u32; 3]; 4], t: u32, s: u32) -> u32  {
-    let mut x = imkey[ORDER[t][_X_]][ORDER[s][_X_]];
-    let mut y = imkey[ORDER[t][_Y_]][ORDER[s][_Y_]];
-    let mut z = imkey[ORDER[t][_Z_]][ORDER[s][_Z_]];
-    let mut w = imkey[ORDER[t][_W_]][ORDER[s][_W_]];
+fn make_one_ekey(imkey: [[u32; 3]; 4], t: u32, s: u32) -> u32 {
+    let t = t as usize;
+    let s = s as usize;
+    let mut x = imkey[ORDER[t][_X_]][INDEX[s][_X_]];
+    let mut y = imkey[ORDER[t][_Y_]][INDEX[s][_Y_]];
+    let mut z = imkey[ORDER[t][_Z_]][INDEX[s][_Z_]];
+    let mut w = imkey[ORDER[t][_W_]][INDEX[s][_W_]];
     x = rol1(x);
     x = (Wrapping(x) + Wrapping(y)).0;
     x &= 0xffffffff;
@@ -202,13 +204,12 @@ fn make_one_ekey(imkey: [[u32; 3]; 4], t: u32, s: u32) -> u32  {
     return x;
 }
 
-fn make_ekeys(imkey: [[u32; 3]; 4], num_ekey: u32, ekey: &mut [u32])  {
-    for n in 0..num_ekey
-        {
-            let t = (n + (n / 36)) % 12;
-            let s = n % 9;
-            ekey[n] = make_one_ekey(imkey, t, s);
-        }
+fn make_ekeys(imkey: [[u32; 3]; 4], num_ekey: u32, ekey: &mut [u32]) {
+    for n in 0..num_ekey {
+        let t = (n + (n / 36)) % 12;
+        let s = n % 9;
+        ekey[n as usize] = make_one_ekey(imkey, t, s);
+    }
 }
 
 fn crypt_block(a: u32, b: u32, c: u32, d: u32, ek: &mut [u32]) -> (u32, u32, u32, u32) {
@@ -318,22 +319,22 @@ pub fn crypt(name: &str, key: u128) {
                 let d = ((buffer[12] as u32) << 24) | ((buffer[13] as u32) << 16) | ((buffer[14] as u32) << 8) | buffer[15] as u32;
                 let (a, c, d, b) = crypt_block(a, b, c, d, &mut ek);
                 let mut out_buffer = [0; 16];
-                out_buffer[0] = (e >> 24) as u8;
-                out_buffer[1] = (e >> 16) as u8;
-                out_buffer[2] = (e >> 8) as u8;
-                out_buffer[3] = e as u8;
-                out_buffer[4] = (f >> 24) as u8;
-                out_buffer[5] = (f >> 16) as u8;
-                out_buffer[6] = (f >> 8) as u8;
-                out_buffer[7] = f as u8;
-                out_buffer[8] = (g >> 24) as u8;
-                out_buffer[9] = (g >> 16) as u8;
-                out_buffer[10] = (g >> 8) as u8;
-                out_buffer[11] = g as u8;
-                out_buffer[12] = (h >> 24) as u8;
-                out_buffer[13] = (h >> 16) as u8;
-                out_buffer[14] = (h >> 8) as u8;
-                out_buffer[15] = h as u8;
+                out_buffer[0] = (a >> 24) as u8;
+                out_buffer[1] = (a >> 16) as u8;
+                out_buffer[2] = (a >> 8) as u8;
+                out_buffer[3] = a as u8;
+                out_buffer[4] = (b >> 24) as u8;
+                out_buffer[5] = (b >> 16) as u8;
+                out_buffer[6] = (b >> 8) as u8;
+                out_buffer[7] = b as u8;
+                out_buffer[8] = (c >> 24) as u8;
+                out_buffer[9] = (c >> 16) as u8;
+                out_buffer[10] = (c >> 8) as u8;
+                out_buffer[11] = c as u8;
+                out_buffer[12] = (d >> 24) as u8;
+                out_buffer[13] = (d >> 16) as u8;
+                out_buffer[14] = (d >> 8) as u8;
+                out_buffer[15] = d as u8;
                 fo.write(&out_buffer);
             }
         }
@@ -359,22 +360,22 @@ pub fn decrypt(name: &str, key: u128) {
                 let d = ((buffer[12] as u32) << 24) | ((buffer[13] as u32) << 16) | ((buffer[14] as u32) << 8) | buffer[15] as u32;
                 let (a, c, d, b) = decrypt_block(a, b, c, d, &mut ek);
                 let mut out_buffer = [0; 16];
-                out_buffer[0] = (e >> 24) as u8;
-                out_buffer[1] = (e >> 16) as u8;
-                out_buffer[2] = (e >> 8) as u8;
-                out_buffer[3] = e as u8;
-                out_buffer[4] = (f >> 24) as u8;
-                out_buffer[5] = (f >> 16) as u8;
-                out_buffer[6] = (f >> 8) as u8;
-                out_buffer[7] = f as u8;
-                out_buffer[8] = (g >> 24) as u8;
-                out_buffer[9] = (g >> 16) as u8;
-                out_buffer[10] = (g >> 8) as u8;
-                out_buffer[11] = g as u8;
-                out_buffer[12] = (h >> 24) as u8;
-                out_buffer[13] = (h >> 16) as u8;
-                out_buffer[14] = (h >> 8) as u8;
-                out_buffer[15] = h as u8;
+                out_buffer[0] = (a >> 24) as u8;
+                out_buffer[1] = (a >> 16) as u8;
+                out_buffer[2] = (a >> 8) as u8;
+                out_buffer[3] = a as u8;
+                out_buffer[4] = (b >> 24) as u8;
+                out_buffer[5] = (b >> 16) as u8;
+                out_buffer[6] = (b >> 8) as u8;
+                out_buffer[7] = b as u8;
+                out_buffer[8] = (c >> 24) as u8;
+                out_buffer[9] = (c >> 16) as u8;
+                out_buffer[10] = (c >> 8) as u8;
+                out_buffer[11] = c as u8;
+                out_buffer[12] = (d >> 24) as u8;
+                out_buffer[13] = (d >> 16) as u8;
+                out_buffer[14] = (d >> 8) as u8;
+                out_buffer[15] = d as u8;
                 fo.write(&out_buffer);
             }
         }
