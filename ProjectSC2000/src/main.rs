@@ -22,8 +22,8 @@ fn main() {
                 (Some("Stream"), "File") => input_name = String::from(v),
                 (Some("Stream"), "Mode") => {
                     mode = String::from(v);
-                    if mode.as_str() != "encoding" && mode.as_str() != "decoding" {
-                        println!("Mode must be \"encoding\" or \"decoding\"!");
+                    if mode.as_str() != "crypt" && mode.as_str() != "decrypt" {
+                        println!("Mode must be \"crypt\" or \"decrypt\"!");
                         abort();
                     }
                 }
@@ -33,13 +33,15 @@ fn main() {
     }
     let key = u128::from_str_radix(&key, 16).unwrap();
     match mode.as_str() {
-        "encoding" => {
-            println!("Encoding of {}", input_name);
-            encode(&input_name, key);
+        "crypt" => {
+            println!("Crypting of {}", input_name);
+            crypt(&input_name, key);
+            println!("Done!");
         },
-        "decoding" => {
-            println!("Decoding of {}", input_name);
-            decode(&input_name, key);
+        "decrypt" => {
+            println!("Decrypting of {}", input_name);
+            decrypt(&input_name, key);
+            println!("Done!");
         },
         _ => {}
     }

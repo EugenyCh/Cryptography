@@ -299,10 +299,12 @@ fn decrypt_block(a: u32, b: u32, c: u32, d: u32, ek: &mut [u32]) -> (u32, u32, u
     (a, b, c, d)
 }
 
-pub fn encode(name: &str, key: u128) {
-    let ek = generate_ek(key);
+pub fn crypt(name: &str, key: u128) {
+    let imkeys = make_imkeys(key);
+    let mut ek = [0u32; 56];
+    make_ekeys(imkeys, 56, &mut ek);
     let mut f = File::open(name).unwrap();
-    let mut fo = File::create(format!("./{}.en", name)).unwrap();
+    let mut fo = File::create(format!("./crypted-{}", name)).unwrap();
     let mut buffer = [0; 16];
     loop {
         let n = f.read(&mut buffer[..]).unwrap();
@@ -310,31 +312,11 @@ pub fn encode(name: &str, key: u128) {
             0 => break,
             1..=15 => (),
             _ => {
-                let mut c0 = 0x55555555u32;
-                let mut c1 = 0x33333333u32;
-                let mut e0 = ((buffer[0] as u32) << 24) | ((buffer[1] as u32) << 16) | ((buffer[2] as u32) << 8) | buffer[3] as u32;
-                let mut f0 = ((buffer[4] as u32) << 24) | ((buffer[5] as u32) << 16) | ((buffer[6] as u32) << 8) | buffer[7] as u32;
-                let mut g0 = ((buffer[8] as u32) << 24) | ((buffer[9] as u32) << 16) | ((buffer[10] as u32) << 8) | buffer[11] as u32;
-                let mut h0 = ((buffer[12] as u32) << 24) | ((buffer[13] as u32) << 16) | ((buffer[14] as u32) << 8) | buffer[15] as u32;
-                for i in 0..6 {
-                    let (e, f, g, h) = (e0, f0, g0, h0);
-                    let (e, f, g, h) = (e ^ ek[8 * i], f ^ ek[8 * i + 1], g ^ ek[8 * i + 2], h ^ ek[8 * i + 3]);
-                    let (e, f, g, h) = bf(e, f, g, h);
-                    let (e, f, g, h) = (e ^ ek[8 * i + 4], f ^ ek[8 * i + 5], g ^ ek[8 * i + 6], h ^ ek[8 * i + 7]);
-                    let (e, f, g, h) = rf(e, f, g, h, c0);
-                    let (e, f, g, h) = rf(g, h, e, f, c0);
-                    e0 = e;
-                    f0 = f;
-                    g0 = g;
-                    h0 = h;
-                    let t = c0;
-                    c0 = c1;
-                    c1 = t;
-                }
-                let (e, f, g, h) = (e0, f0, g0, h0);
-                let (e, f, g, h) = (e ^ ek[48], f ^ ek[49], g ^ ek[50], h ^ ek[51]);
-                let (e, f, g, h) = bf(e, f, g, h);
-                let (e, f, g, h) = (e ^ ek[52], f ^ ek[53], g ^ ek[54], h ^ ek[55]);
+                let a = ((buffer[0] as u32) << 24) | ((buffer[1] as u32) << 16) | ((buffer[2] as u32) << 8) | buffer[3] as u32;
+                let b = ((buffer[4] as u32) << 24) | ((buffer[5] as u32) << 16) | ((buffer[6] as u32) << 8) | buffer[7] as u32;
+                let c = ((buffer[8] as u32) << 24) | ((buffer[9] as u32) << 16) | ((buffer[10] as u32) << 8) | buffer[11] as u32;
+                let d = ((buffer[12] as u32) << 24) | ((buffer[13] as u32) << 16) | ((buffer[14] as u32) << 8) | buffer[15] as u32;
+                let (a, c, d, b) = crypt_block(a, b, c, d, &mut ek);
                 let mut out_buffer = [0; 16];
                 out_buffer[0] = (e >> 24) as u8;
                 out_buffer[1] = (e >> 16) as u8;
@@ -358,10 +340,12 @@ pub fn encode(name: &str, key: u128) {
     }
 }
 
-pub fn decode(name: &str, key: u128) {
-    let ek = generate_ek(key);
+pub fn decrypt(name: &str, key: u128) {
+    let imkeys = make_imkeys(key);
+    let mut ek = [0u32; 56];
+    make_ekeys(imkeys, 56, &mut ek);
     let mut f = File::open(name).unwrap();
-    let mut fo = File::create(format!("./{}.src", name)).unwrap();
+    let mut fo = File::create(format!("./decrypted-{}", name)).unwrap();
     let mut buffer = [0; 16];
     loop {
         let n = f.read(&mut buffer[..]).unwrap();
@@ -369,31 +353,11 @@ pub fn decode(name: &str, key: u128) {
             0 => break,
             1..=15 => (),
             _ => {
-                let mut c0 = 0x33333333u32;
-                let mut c1 = 0x55555555u32;
-                let mut e0 = ((buffer[0] as u32) << 24) | ((buffer[1] as u32) << 16) | ((buffer[2] as u32) << 8) | buffer[3] as u32;
-                let mut f0 = ((buffer[4] as u32) << 24) | ((buffer[5] as u32) << 16) | ((buffer[6] as u32) << 8) | buffer[7] as u32;
-                let mut g0 = ((buffer[8] as u32) << 24) | ((buffer[9] as u32) << 16) | ((buffer[10] as u32) << 8) | buffer[11] as u32;
-                let mut h0 = ((buffer[12] as u32) << 24) | ((buffer[13] as u32) << 16) | ((buffer[14] as u32) << 8) | buffer[15] as u32;
-                for i in 6..0 {
-                    let (e, f, g, h) = (e0, f0, g0, h0);
-                    let (e, f, g, h) = (e ^ ek[8 * i + 4], f ^ ek[8 * i + 5], g ^ ek[8 * i + 6], h ^ ek[8 * i + 7]);
-                    let (e, f, g, h) = bf_1(e, f, g, h);
-                    let (e, f, g, h) = (e ^ ek[8 * i], f ^ ek[8 * i + 1], g ^ ek[8 * i + 2], h ^ ek[8 * i + 3]);
-                    let (e, f, g, h) = rf(e, f, g, h, c0);
-                    let (e, f, g, h) = rf(g, h, e, f, c0);
-                    e0 = e;
-                    f0 = f;
-                    g0 = g;
-                    h0 = h;
-                    let t = c0;
-                    c0 = c1;
-                    c1 = t;
-                }
-                let (e, f, g, h) = (e0, f0, g0, h0);
-                let (e, f, g, h) = (e ^ ek[4], f ^ ek[5], g ^ ek[6], h ^ ek[7]);
-                let (e, f, g, h) = bf_1(e, f, g, h);
-                let (e, f, g, h) = (e ^ ek[0], f ^ ek[1], g ^ ek[2], h ^ ek[3]);
+                let a = ((buffer[0] as u32) << 24) | ((buffer[1] as u32) << 16) | ((buffer[2] as u32) << 8) | buffer[3] as u32;
+                let b = ((buffer[4] as u32) << 24) | ((buffer[5] as u32) << 16) | ((buffer[6] as u32) << 8) | buffer[7] as u32;
+                let c = ((buffer[8] as u32) << 24) | ((buffer[9] as u32) << 16) | ((buffer[10] as u32) << 8) | buffer[11] as u32;
+                let d = ((buffer[12] as u32) << 24) | ((buffer[13] as u32) << 16) | ((buffer[14] as u32) << 8) | buffer[15] as u32;
+                let (a, c, d, b) = decrypt_block(a, b, c, d, &mut ek);
                 let mut out_buffer = [0; 16];
                 out_buffer[0] = (e >> 24) as u8;
                 out_buffer[1] = (e >> 16) as u8;
