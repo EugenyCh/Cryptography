@@ -175,6 +175,7 @@ pub fn encode(name: &str, key: u128) {
                     let (e, f, g, h) = bf(e, f, g, h);
                     let (e, f, g, h) = (e ^ ek[8 * i + 4], f ^ ek[8 * i + 5], g ^ ek[8 * i + 6], h ^ ek[8 * i + 7]);
                     let (e, f, g, h) = rf(e, f, g, h, c0);
+                    let (e, f, g, h) = rf(g, h, e, f, c0);
                     e0 = e;
                     f0 = f;
                     g0 = g;
@@ -221,8 +222,8 @@ pub fn decode(name: &str, key: u128) {
             0 => break,
             1..=15 => (),
             _ => {
-                let mut c0 = 0x55555555u32;
-                let mut c1 = 0x33333333u32;
+                let mut c0 = 0x33333333u32;
+                let mut c1 = 0x55555555u32;
                 let mut e0 = ((buffer[0] as u32) << 24) | ((buffer[1] as u32) << 16) | ((buffer[2] as u32) << 8) | buffer[3] as u32;
                 let mut f0 = ((buffer[4] as u32) << 24) | ((buffer[5] as u32) << 16) | ((buffer[6] as u32) << 8) | buffer[7] as u32;
                 let mut g0 = ((buffer[8] as u32) << 24) | ((buffer[9] as u32) << 16) | ((buffer[10] as u32) << 8) | buffer[11] as u32;
@@ -233,6 +234,7 @@ pub fn decode(name: &str, key: u128) {
                     let (e, f, g, h) = bf_1(e, f, g, h);
                     let (e, f, g, h) = (e ^ ek[8 * i], f ^ ek[8 * i + 1], g ^ ek[8 * i + 2], h ^ ek[8 * i + 3]);
                     let (e, f, g, h) = rf(e, f, g, h, c0);
+                    let (e, f, g, h) = rf(g, h, e, f, c0);
                     e0 = e;
                     f0 = f;
                     g0 = g;
