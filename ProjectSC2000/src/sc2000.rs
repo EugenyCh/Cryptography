@@ -84,17 +84,17 @@ fn mf(a: u32) -> u32 {
 }
 
 fn sf(a: u32) -> u32 {
-    let i1 = (a > > 26) & 0x3F;
-    let i2 = (a > > 21) & 0x1F;
+    let i1 = (a >> 26) & 0x3F;
+    let i2 = (a >> 21) & 0x1F;
     let i3 = (a >> 16) & 0x1F;
-    let i4 = (a > > 11) & 0x1F;
-    let i5 = (a > > 6) & 0x1F;
+    let i4 = (a >> 11) & 0x1F;
+    let i5 = (a >> 6) & 0x1F;
     let i6 = a & 0x3F;
-    let s1 = S6[i1 as usize] < < 26;
+    let s1 = S6[i1 as usize] << 26;
     let s2 = S5[i2 as usize] << 21;
-    let s3 = S5[i3 as usize] < < 16;
-    let s4 = S5[i4 as usize] < < 11;
-    let s5 = S5[i5 as usize] < < 6;
+    let s3 = S5[i3 as usize] << 16;
+    let s4 = S5[i4 as usize] << 11;
+    let s5 = S5[i5 as usize] << 6;
     let s6 = S6[i6 as usize];
     s1 | s2 | s3 | s4 | s5 | s6
 }
@@ -138,7 +138,7 @@ fn bf_helper(a: u32, b: u32, c: u32, d: u32, r: bool) -> (u32, u32, u32, u32) {
         if x & 4 != 0 { f |= m; }
         if x & 2 != 0 { g |= m; }
         if x & 1 != 0 { h |= m; }
-        m < < = 1;
+        m <<= 1;
     }
     (e, f, g, h)
 }
@@ -166,15 +166,15 @@ fn rol1(x: u32) -> u32 {
 
 // x = x_0 || x_1 || x_2 || ... || x_31
 fn bit_at(x: u32, i: u32) -> u32 {
-    (x > > i) & 1
+    (x >> i) & 1
 }
 
 fn generate_ek(key: u128) -> [u32; 56] {
     let mut uk = [0u32; 8];
     uk[3] = (key & 0xffffffff) as u32;
-    uk[2] = ((key > > 32) & 0xffffffff) as u32;
+    uk[2] = ((key >> 32) & 0xffffffff) as u32;
     uk[1] = ((key >> 64) & 0xffffffff) as u32;
-    uk[0] = ((key > > 96) & 0xffffffff) as u32;
+    uk[0] = ((key >> 96) & 0xffffffff) as u32;
     uk[7] = uk[3];
     uk[6] = uk[2];
     uk[5] = uk[1];
@@ -229,10 +229,10 @@ pub fn encode(name: &str, key: u128) {
             _ => {
                 let mut c0 = 0x55555555u32;
                 let mut c1 = 0x33333333u32;
-                let mut e0 = ((buffer[0] as u32) < < 24) | ((buffer[1] as u32) << 16) | ((buffer[2] as u32) < < 8) | buffer[3] as u32;
-                let mut f0 = ((buffer[4] as u32) < < 24) | ((buffer[5] as u32) < < 16) | ((buffer[6] as u32) < < 8) | buffer[7] as u32;
-                let mut g0 = ((buffer[8] as u32) < < 24) | ((buffer[9] as u32) < < 16) | ((buffer[10] as u32) << 8) | buffer[11] as u32;
-                let mut h0 = ((buffer[12] as u32) < < 24) | ((buffer[13] as u32) < < 16) | ((buffer[14] as u32) < < 8) | buffer[15] as u32;
+                let mut e0 = ((buffer[0] as u32) << 24) | ((buffer[1] as u32) << 16) | ((buffer[2] as u32) << 8) | buffer[3] as u32;
+                let mut f0 = ((buffer[4] as u32) << 24) | ((buffer[5] as u32) << 16) | ((buffer[6] as u32) << 8) | buffer[7] as u32;
+                let mut g0 = ((buffer[8] as u32) << 24) | ((buffer[9] as u32) << 16) | ((buffer[10] as u32) << 8) | buffer[11] as u32;
+                let mut h0 = ((buffer[12] as u32) << 24) | ((buffer[13] as u32) << 16) | ((buffer[14] as u32) << 8) | buffer[15] as u32;
                 for i in 0..6 {
                     let (e, f, g, h) = (e0, f0, g0, h0);
                     let (e, f, g, h) = (e ^ ek[8 * i], f ^ ek[8 * i + 1], g ^ ek[8 * i + 2], h ^ ek[8 * i + 3]);
@@ -253,21 +253,21 @@ pub fn encode(name: &str, key: u128) {
                 let (e, f, g, h) = bf(e, f, g, h);
                 let (e, f, g, h) = (e ^ ek[52], f ^ ek[53], g ^ ek[54], h ^ ek[55]);
                 let mut out_buffer = [0; 16];
-                out_buffer[0] = (e > > 24) as u8;
-                out_buffer[1] = (e > > 16) as u8;
-                out_buffer[2] = (e > > 8) as u8;
+                out_buffer[0] = (e >> 24) as u8;
+                out_buffer[1] = (e >> 16) as u8;
+                out_buffer[2] = (e >> 8) as u8;
                 out_buffer[3] = e as u8;
-                out_buffer[4] = (f > > 24) as u8;
-                out_buffer[5] = (f > > 16) as u8;
-                out_buffer[6] = (f > > 8) as u8;
+                out_buffer[4] = (f >> 24) as u8;
+                out_buffer[5] = (f >> 16) as u8;
+                out_buffer[6] = (f >> 8) as u8;
                 out_buffer[7] = f as u8;
-                out_buffer[8] = (g > > 24) as u8;
-                out_buffer[9] = (g > > 16) as u8;
-                out_buffer[10] = (g > > 8) as u8;
+                out_buffer[8] = (g >> 24) as u8;
+                out_buffer[9] = (g >> 16) as u8;
+                out_buffer[10] = (g >> 8) as u8;
                 out_buffer[11] = g as u8;
-                out_buffer[12] = (h > > 24) as u8;
+                out_buffer[12] = (h >> 24) as u8;
                 out_buffer[13] = (h >> 16) as u8;
-                out_buffer[14] = (h > > 8) as u8;
+                out_buffer[14] = (h >> 8) as u8;
                 out_buffer[15] = h as u8;
                 fo.write(&out_buffer);
             }
@@ -288,10 +288,10 @@ pub fn decode(name: &str, key: u128) {
             _ => {
                 let mut c0 = 0x33333333u32;
                 let mut c1 = 0x55555555u32;
-                let mut e0 = ((buffer[0] as u32) < < 24) | ((buffer[1] as u32) << 16) | ((buffer[2] as u32) < < 8) | buffer[3] as u32;
-                let mut f0 = ((buffer[4] as u32) < < 24) | ((buffer[5] as u32) < < 16) | ((buffer[6] as u32) < < 8) | buffer[7] as u32;
-                let mut g0 = ((buffer[8] as u32) < < 24) | ((buffer[9] as u32) < < 16) | ((buffer[10] as u32) << 8) | buffer[11] as u32;
-                let mut h0 = ((buffer[12] as u32) < < 24) | ((buffer[13] as u32) < < 16) | ((buffer[14] as u32) < < 8) | buffer[15] as u32;
+                let mut e0 = ((buffer[0] as u32) << 24) | ((buffer[1] as u32) << 16) | ((buffer[2] as u32) << 8) | buffer[3] as u32;
+                let mut f0 = ((buffer[4] as u32) << 24) | ((buffer[5] as u32) << 16) | ((buffer[6] as u32) << 8) | buffer[7] as u32;
+                let mut g0 = ((buffer[8] as u32) << 24) | ((buffer[9] as u32) << 16) | ((buffer[10] as u32) << 8) | buffer[11] as u32;
+                let mut h0 = ((buffer[12] as u32) << 24) | ((buffer[13] as u32) << 16) | ((buffer[14] as u32) << 8) | buffer[15] as u32;
                 for i in 6..0 {
                     let (e, f, g, h) = (e0, f0, g0, h0);
                     let (e, f, g, h) = (e ^ ek[8 * i + 4], f ^ ek[8 * i + 5], g ^ ek[8 * i + 6], h ^ ek[8 * i + 7]);
@@ -312,21 +312,21 @@ pub fn decode(name: &str, key: u128) {
                 let (e, f, g, h) = bf_1(e, f, g, h);
                 let (e, f, g, h) = (e ^ ek[0], f ^ ek[1], g ^ ek[2], h ^ ek[3]);
                 let mut out_buffer = [0; 16];
-                out_buffer[0] = (e > > 24) as u8;
-                out_buffer[1] = (e > > 16) as u8;
-                out_buffer[2] = (e > > 8) as u8;
+                out_buffer[0] = (e >> 24) as u8;
+                out_buffer[1] = (e >> 16) as u8;
+                out_buffer[2] = (e >> 8) as u8;
                 out_buffer[3] = e as u8;
-                out_buffer[4] = (f > > 24) as u8;
-                out_buffer[5] = (f > > 16) as u8;
-                out_buffer[6] = (f > > 8) as u8;
+                out_buffer[4] = (f >> 24) as u8;
+                out_buffer[5] = (f >> 16) as u8;
+                out_buffer[6] = (f >> 8) as u8;
                 out_buffer[7] = f as u8;
-                out_buffer[8] = (g > > 24) as u8;
-                out_buffer[9] = (g > > 16) as u8;
-                out_buffer[10] = (g > > 8) as u8;
+                out_buffer[8] = (g >> 24) as u8;
+                out_buffer[9] = (g >> 16) as u8;
+                out_buffer[10] = (g >> 8) as u8;
                 out_buffer[11] = g as u8;
-                out_buffer[12] = (h > > 24) as u8;
+                out_buffer[12] = (h >> 24) as u8;
                 out_buffer[13] = (h >> 16) as u8;
-                out_buffer[14] = (h > > 8) as u8;
+                out_buffer[14] = (h >> 8) as u8;
                 out_buffer[15] = h as u8;
                 fo.write(&out_buffer);
             }
