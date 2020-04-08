@@ -317,7 +317,7 @@ pub fn crypt(name: &str, key: u128) {
                 let b = ((buffer[4] as u32) << 24) | ((buffer[5] as u32) << 16) | ((buffer[6] as u32) << 8) | buffer[7] as u32;
                 let c = ((buffer[8] as u32) << 24) | ((buffer[9] as u32) << 16) | ((buffer[10] as u32) << 8) | buffer[11] as u32;
                 let d = ((buffer[12] as u32) << 24) | ((buffer[13] as u32) << 16) | ((buffer[14] as u32) << 8) | buffer[15] as u32;
-                let (a, c, d, b) = crypt_block(a, b, c, d, &mut ek);
+                let (a, b, c, d) = crypt_block(a, b, c, d, &mut ek);
                 let mut out_buffer = [0; 16];
                 out_buffer[0] = (a >> 24) as u8;
                 out_buffer[1] = (a >> 16) as u8;
@@ -358,7 +358,7 @@ pub fn decrypt(name: &str, key: u128) {
                 let b = ((buffer[4] as u32) << 24) | ((buffer[5] as u32) << 16) | ((buffer[6] as u32) << 8) | buffer[7] as u32;
                 let c = ((buffer[8] as u32) << 24) | ((buffer[9] as u32) << 16) | ((buffer[10] as u32) << 8) | buffer[11] as u32;
                 let d = ((buffer[12] as u32) << 24) | ((buffer[13] as u32) << 16) | ((buffer[14] as u32) << 8) | buffer[15] as u32;
-                let (a, c, d, b) = decrypt_block(a, b, c, d, &mut ek);
+                let (a, b, c, d) = decrypt_block(a, b, c, d, &mut ek);
                 let mut out_buffer = [0; 16];
                 out_buffer[0] = (a >> 24) as u8;
                 out_buffer[1] = (a >> 16) as u8;
