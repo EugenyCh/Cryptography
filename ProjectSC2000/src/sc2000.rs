@@ -42,31 +42,31 @@ static S4_1: [u32; 16] = [
     10, 6, 0, 14, 12, 1, 9, 4, 13, 11, 2, 7, 3, 8, 15, 5
 ];
 
-static INDEX: [&[usize]; 9] = [
-    &[0, 0, 0, 0],
-    &[1, 1, 1, 1],
-    &[2, 2, 2, 2],
-    &[0, 1, 0, 1],
-    &[1, 2, 1, 2],
-    &[2, 0, 2, 0],
-    &[0, 2, 0, 2],
-    &[1, 0, 1, 0],
-    &[2, 1, 2, 1]
+static INDEX: [[usize; 4]; 9] = [
+    [0, 0, 0, 0],
+    [1, 1, 1, 1],
+    [2, 2, 2, 2],
+    [0, 1, 0, 1],
+    [1, 2, 1, 2],
+    [2, 0, 2, 0],
+    [0, 2, 0, 2],
+    [1, 0, 1, 0],
+    [2, 1, 2, 1]
 ];
 
-static ORDER: [&[usize]; 12] = [
-    &[_A_, _B_, _C_, _D_],
-    &[_B_, _A_, _D_, _C_],
-    &[_C_, _D_, _A_, _B_],
-    &[_D_, _C_, _B_, _A_],
-    &[_A_, _C_, _D_, _B_],
-    &[_B_, _D_, _C_, _A_],
-    &[_C_, _A_, _B_, _D_],
-    &[_D_, _B_, _A_, _C_],
-    &[_A_, _D_, _B_, _C_],
-    &[_B_, _C_, _A_, _D_],
-    &[_C_, _B_, _D_, _A_],
-    &[_D_, _A_, _C_, _B_]
+static ORDER: [[usize; 4]; 12] = [
+    [_A_, _B_, _C_, _D_],
+    [_B_, _A_, _D_, _C_],
+    [_C_, _D_, _A_, _B_],
+    [_D_, _C_, _B_, _A_],
+    [_A_, _C_, _D_, _B_],
+    [_B_, _D_, _C_, _A_],
+    [_C_, _A_, _B_, _D_],
+    [_D_, _B_, _A_, _C_],
+    [_A_, _D_, _B_, _C_],
+    [_B_, _C_, _A_, _D_],
+    [_C_, _B_, _D_, _A_],
+    [_D_, _A_, _C_, _B_]
 ];
 
 fn lf(a: u32, b: u32, mask: u32) -> (u32, u32) {
@@ -74,11 +74,13 @@ fn lf(a: u32, b: u32, mask: u32) -> (u32, u32) {
 }
 
 fn mf(a: u32) -> u32 {
+    let mut a = a;
     let mut b: u32 = 0;
-    for i in 0..32 {
-        if bit_at(a, i) == 1 {
-            b = b ^ M[(31 - i) as usize];
+    for i in 31..=0 {
+        if a & 1 != 0 {
+            b = b ^ M[i as usize];
         }
+        a >>= 1;
     }
     b
 }
@@ -152,21 +154,39 @@ fn make_one_imkey(k1: u32, k2: u32, i: u32, j: u32) -> u32 {
     let mut ka = mf(sf(k1));
     let mut kb = mf(sf(k2));
     let mut m = mf(sf(4 * i + j));
-    ka += m;
+    //ka += m;
+    ka = (Wrapping(ka) + Wrapping(m)).0;
     ka &= 0xffffffff;
-    kb *= (i + 1);
+    //kb *= (i + 1);
+    kb = (Wrapping(kb) * Wrapping(i + 1)).0;
     kb &= 0xffffffff;
     ka ^= kb;
     return mf(sf(ka));
 }
 
-fn rol1(x: u32) -> u32 {
-    x.rotate_left(1)
+fn make_imkeys(ukey: [u32; 8]) -> [[u32; 3]; 4]
+{
+    let k1 = ukey[0];
+    let k2 = ukey[1];
+    let k3 = ukey[2];
+    let k4 = ukey[3];
+    let k5 = ukey[4];
+    let k6 = ukey[5];
+    let k7 = ukey[6];
+    let k8 = ukey[7];
+
+    let mut imkey = [[u32; 3]; 4];
+    for i in 0..3 {
+        imkey[_A_][i as usize] = make_one_imkey(k1, k2, i, 0);
+        imkey[_B_][i as usize] = make_one_imkey(k3, k4, i, 1);
+        imkey[_C_][i as usize] = make_one_imkey(k5, k6, i, 2);
+        imkey[_D_][i as usize] = make_one_imkey(k7, k8, i, 3);
+    }
+    imkey
 }
 
-// x = x_0 || x_1 || x_2 || ... || x_31
-fn bit_at(x: u32, i: u32) -> u32 {
-    (x >> i) & 1
+fn rol1(x: u32) -> u32 {
+    x.rotate_left(1)
 }
 
 fn generate_ek(key: u128) -> [u32; 56] {
