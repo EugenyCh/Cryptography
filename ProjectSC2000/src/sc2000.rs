@@ -166,16 +166,15 @@ fn make_one_imkey(k1: u32, k2: u32, i: u32, j: u32) -> u32 {
     return mf(sf(ka));
 }
 
-fn make_imkeys(ukey: [u32; 8]) -> [[u32; 3]; 4]
-{
-    let k1 = ukey[0];
-    let k2 = ukey[1];
-    let k3 = ukey[2];
-    let k4 = ukey[3];
-    let k5 = ukey[4];
-    let k6 = ukey[5];
-    let k7 = ukey[6];
-    let k8 = ukey[7];
+fn make_imkeys(ukey: u128) -> [[u32; 3]; 4]  {
+    let k1 = ((ukey >> 96) & 0xffffffff) as u32;
+    let k2 = ((ukey >> 64) & 0xffffffff) as u32;
+    let k3 = ((ukey >> 32) & 0xffffffff) as u32;
+    let k4 = (ukey & 0xffffffff) as u32;
+    let k5 = k1;
+    let k6 = k2;
+    let k7 = k3;
+    let k8 = k4;
 
     let mut imkey = [[u32; 3]; 4];
     for i in 0..3 {
@@ -187,8 +186,7 @@ fn make_imkeys(ukey: [u32; 8]) -> [[u32; 3]; 4]
     imkey
 }
 
-fn make_one_ekey(imkey: [[u32; 3]; 4], t: u32, s: u32) -> u32
-{
+fn make_one_ekey(imkey: [[u32; 3]; 4], t: u32, s: u32) -> u32  {
     let mut x = imkey[ORDER[t][_X_]][ORDER[s][_X_]];
     let mut y = imkey[ORDER[t][_Y_]][ORDER[s][_Y_]];
     let mut z = imkey[ORDER[t][_Z_]][ORDER[s][_Z_]];
@@ -204,14 +202,101 @@ fn make_one_ekey(imkey: [[u32; 3]; 4], t: u32, s: u32) -> u32
     return x;
 }
 
-fn make_ekeys(imkey: [[u32; 3]; 4], num_ekey: u32, ekey: &mut [u32])
-{
+fn make_ekeys(imkey: [[u32; 3]; 4], num_ekey: u32, ekey: &mut [u32])  {
     for n in 0..num_ekey
-    {
-        let t = (n + (n / 36)) % 12;
-        let s = n % 9;
-        ekey[n] = make_one_ekey(imkey, t, s);
-    }
+        {
+            let t = (n + (n / 36)) % 12;
+            let s = n % 9;
+            ekey[n] = make_one_ekey(imkey, t, s);
+        }
+}
+
+fn crypt_block(a: u32, b: u32, c: u32, d: u32, ek: &mut [u32]) -> (u32, u32, u32, u32) {
+    let (a, b, c, d) = iif(a, b, c, d, ek[0], ek[1], ek[2], ek[3]);
+    let (a, b, c, d) = bf(a, b, c, d);
+    let (a, b, c, d) = iif(a, b, c, d, ek[4], ek[5], ek[6], ek[7]);
+    let (a, b, c, d) = rf(a, b, c, d, 0x55555555);
+    let (c, d, a, b) = rf(a, b, c, d, 0x55555555);
+
+    let (a, b, c, d) = iif(a, b, c, d, ek[8], ek[9], ek[10], ek[11]);
+    let (a, b, c, d) = bf(a, b, c, d);
+    let (a, b, c, d) = iif(a, b, c, d, ek[12], ek[13], ek[14], ek[15]);
+    let (a, b, c, d) = rf(a, b, c, d, 0x33333333);
+    let (c, d, a, b) = rf(a, b, c, d, 0x33333333);
+
+    let (a, b, c, d) = iif(a, b, c, d, ek[16], ek[17], ek[18], ek[19]);
+    let (a, b, c, d) = bf(a, b, c, d);
+    let (a, b, c, d) = iif(a, b, c, d, ek[20], ek[21], ek[22], ek[23]);
+    let (a, b, c, d) = rf(a, b, c, d, 0x55555555);
+    let (c, d, a, b) = rf(a, b, c, d, 0x55555555);
+
+    let (a, b, c, d) = iif(a, b, c, d, ek[24], ek[25], ek[26], ek[27]);
+    let (a, b, c, d) = bf(a, b, c, d);
+    let (a, b, c, d) = iif(a, b, c, d, ek[28], ek[29], ek[30], ek[31]);
+    let (a, b, c, d) = rf(a, b, c, d, 0x33333333);
+    let (c, d, a, b) = rf(a, b, c, d, 0x33333333);
+
+    let (a, b, c, d) = iif(a, b, c, d, ek[32], ek[33], ek[34], ek[35]);
+    let (a, b, c, d) = bf(a, b, c, d);
+    let (a, b, c, d) = iif(a, b, c, d, ek[36], ek[37], ek[38], ek[39]);
+    let (a, b, c, d) = rf(a, b, c, d, 0x55555555);
+    let (c, d, a, b) = rf(a, b, c, d, 0x55555555);
+
+    let (a, b, c, d) = iif(a, b, c, d, ek[40], ek[41], ek[42], ek[43]);
+    let (a, b, c, d) = bf(a, b, c, d);
+    let (a, b, c, d) = iif(a, b, c, d, ek[44], ek[45], ek[46], ek[47]);
+    let (a, b, c, d) = rf(a, b, c, d, 0x33333333);
+    let (c, d, a, b) = rf(a, b, c, d, 0x33333333);
+
+    let (a, b, c, d) = iif(a, b, c, d, ek[48], ek[49], ek[50], ek[51]);
+    let (a, b, c, d) = bf(a, b, c, d);
+    let (a, b, c, d) = iif(a, b, c, d, ek[52], ek[53], ek[54], ek[55]);
+
+    (a, b, c, d)
+}
+
+fn decrypt_block(a: u32, b: u32, c: u32, d: u32, ek: &mut [u32]) -> (u32, u32, u32, u32) {
+    let (a, b, c, d) = iif(a, b, c, d, ek[52], ek[53], ek[54], ek[55]);
+    let (a, b, c, d) = bf_1(a, b, c, d);
+    let (a, b, c, d) = iif(a, b, c, d, ek[48], ek[49], ek[50], ek[51]);
+    let (a, b, c, d) = rf(a, b, c, d, 0x33333333);
+    let (c, d, a, b) = rf(a, b, c, d, 0x33333333);
+
+    let (a, b, c, d) = iif(a, b, c, d, ek[44], ek[45], ek[46], ek[47]);
+    let (a, b, c, d) = bf_1(a, b, c, d);
+    let (a, b, c, d) = iif(a, b, c, d, ek[40], ek[41], ek[42], ek[43]);
+    let (a, b, c, d) = rf(a, b, c, d, 0x55555555);
+    let (c, d, a, b) = rf(a, b, c, d, 0x55555555);
+
+    let (a, b, c, d) = iif(a, b, c, d, ek[36], ek[37], ek[38], ek[39]);
+    let (a, b, c, d) = bf_1(a, b, c, d);
+    let (a, b, c, d) = iif(a, b, c, d, ek[32], ek[33], ek[34], ek[35]);
+    let (a, b, c, d) = rf(a, b, c, d, 0x33333333);
+    let (c, d, a, b) = rf(a, b, c, d, 0x33333333);
+
+    let (a, b, c, d) = iif(a, b, c, d, ek[28], ek[29], ek[30], ek[31]);
+    let (a, b, c, d) = bf_1(a, b, c, d);
+    let (a, b, c, d) = iif(a, b, c, d, ek[24], ek[25], ek[26], ek[27]);
+    let (a, b, c, d) = rf(a, b, c, d, 0x55555555);
+    let (c, d, a, b) = rf(a, b, c, d, 0x55555555);
+
+    let (a, b, c, d) = iif(a, b, c, d, ek[20], ek[21], ek[22], ek[23]);
+    let (a, b, c, d) = bf_1(a, b, c, d);
+    let (a, b, c, d) = iif(a, b, c, d, ek[16], ek[17], ek[18], ek[19]);
+    let (a, b, c, d) = rf(a, b, c, d, 0x33333333);
+    let (c, d, a, b) = rf(a, b, c, d, 0x33333333);
+
+    let (a, b, c, d) = iif(a, b, c, d, ek[12], ek[13], ek[14], ek[15]);
+    let (a, b, c, d) = bf_1(a, b, c, d);
+    let (a, b, c, d) = iif(a, b, c, d, ek[8], ek[9], ek[10], ek[11]);
+    let (a, b, c, d) = rf(a, b, c, d, 0x55555555);
+    let (c, d, a, b) = rf(a, b, c, d, 0x55555555);
+
+    let (a, b, c, d) = iif(a, b, c, d, ek[4], ek[5], ek[6], ek[7]);
+    let (a, b, c, d) = bf_1(a, b, c, d);
+    let (a, b, c, d) = iif(a, b, c, d, ek[0], ek[1], ek[2], ek[3]);
+
+    (a, b, c, d)
 }
 
 pub fn encode(name: &str, key: u128) {
