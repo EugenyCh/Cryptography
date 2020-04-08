@@ -38,9 +38,8 @@ fn ff(a: u32, b: u32, mask: u32) -> (u32, u32) {
 
 fn rf(a: u32, b: u32, c: u32, d: u32, mask: u32) -> (u32, u32, u32, u32) {
     let (s, t) = ff(c, d, mask);
-    let (g, h) = (a ^ s, b ^ t);
-    let (s, t) = ff(g, h, mask);
-    let (e, f) = (c ^ s, d ^ t);
+    let (e, f) = (a ^ s, b ^ t);
+    let (g, h) = (c, d);
     (e, f, g, h)
 }
 
