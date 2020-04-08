@@ -120,17 +120,13 @@ fn bf(a: u32, b: u32, c: u32, d: u32) -> (u32, u32, u32, u32) {
     bf_helper(a, b, c, d, false)
 }
 
-fn bf_1(a: u32, b: u32, c: u32, d: u32) -> (u32, u32, u32, u32) {
-    bf_helper(a, b, c, d, true)
-}
-
 fn bf_helper(a: u32, b: u32, c: u32, d: u32, r: bool) -> (u32, u32, u32, u32) {
     let mut e = 0;
     let mut f = 0;
     let mut g = 0;
     let mut h = 0;
     let mut m = 1;
-    for i in 0..32 {
+    for _ in 0..32 {
         let mut x = 0u32;
         if a & m != 0 { x |= 8; }
         if b & m != 0 { x |= 4; }
@@ -157,7 +153,7 @@ fn iif(a: u32, b: u32, c: u32, d: u32,
 fn make_one_imkey(k1: u32, k2: u32, i: u32, j: u32) -> u32 {
     let mut ka = mf(sf(k1));
     let mut kb = mf(sf(k2));
-    let mut m = mf(sf(4 * i + j));
+    let m = mf(sf(4 * i + j));
     ka = (Wrapping(ka) + Wrapping(m)).0;
     ka &= 0xffffffff;
     kb = (Wrapping(kb) * Wrapping(i + 1)).0;
@@ -190,9 +186,9 @@ fn make_one_ekey(imkey: [[u32; 3]; 4], t: u32, s: u32) -> u32 {
     let t = t as usize;
     let s = s as usize;
     let mut x = imkey[ORDER[t][_X_]][INDEX[s][_X_]];
-    let mut y = imkey[ORDER[t][_Y_]][INDEX[s][_Y_]];
+    let y = imkey[ORDER[t][_Y_]][INDEX[s][_Y_]];
     let mut z = imkey[ORDER[t][_Z_]][INDEX[s][_Z_]];
-    let mut w = imkey[ORDER[t][_W_]][INDEX[s][_W_]];
+    let w = imkey[ORDER[t][_W_]][INDEX[s][_W_]];
     x = rol1(x);
     x = (Wrapping(x) + Wrapping(y)).0;
     x &= 0xffffffff;
@@ -212,7 +208,7 @@ fn make_ekeys(imkey: [[u32; 3]; 4], num_ekey: u32, ekey: &mut [u32]) {
     }
 }
 
-fn crypt_block(a: u32, b: u32, c: u32, d: u32, ek: &mut [u32]) -> (u32, u32, u32, u32) {
+fn crypt_block(a: u32, b: u32, c: u32, d: u32, ek: &[u32]) -> (u32, u32, u32, u32) {
     let (a, b, c, d) = iif(a, b, c, d, ek[0], ek[1], ek[2], ek[3]);
     let (a, b, c, d) = bf(a, b, c, d);
     let (a, b, c, d) = iif(a, b, c, d, ek[4], ek[5], ek[6], ek[7]);
@@ -256,16 +252,13 @@ fn crypt_block(a: u32, b: u32, c: u32, d: u32, ek: &mut [u32]) -> (u32, u32, u32
     (a, b, c, d)
 }
 
-pub fn crypt(name: &str, key: u128) {
-    let imkeys = make_imkeys(key);
-    let mut ek = [0u32; 56];
-    make_ekeys(imkeys, 56, &mut ek);
+pub fn hash(name: &str, h0: u128) -> u128 {
+    // A = M_i
+    // B = M_i ^ h
+    // C = M_i ^ h
+    let mut h = h0;
     let mut f = File::open(name).unwrap();
-    let size = f.metadata().unwrap().len();
-    let mut fo = File::create(format!("./crypted-{}", name)).unwrap();
     let mut buffer = [0; 16];
-    let shift_buffer = [(size % 16) as u8];
-    fo.write(&shift_buffer);
     loop {
         let n = f.read(&mut buffer[..]).unwrap();
         match n {
@@ -280,26 +273,27 @@ pub fn crypt(name: &str, key: u128) {
                 let b = ((buffer[4] as u32) << 24) | ((buffer[5] as u32) << 16) | ((buffer[6] as u32) << 8) | buffer[7] as u32;
                 let c = ((buffer[8] as u32) << 24) | ((buffer[9] as u32) << 16) | ((buffer[10] as u32) << 8) | buffer[11] as u32;
                 let d = ((buffer[12] as u32) << 24) | ((buffer[13] as u32) << 16) | ((buffer[14] as u32) << 8) | buffer[15] as u32;
-                let (a, b, c, d) = crypt_block(a, b, c, d, &mut ek);
-                let mut out_buffer = [0; 16];
-                out_buffer[0] = (a >> 24) as u8;
-                out_buffer[1] = (a >> 16) as u8;
-                out_buffer[2] = (a >> 8) as u8;
-                out_buffer[3] = a as u8;
-                out_buffer[4] = (b >> 24) as u8;
-                out_buffer[5] = (b >> 16) as u8;
-                out_buffer[6] = (b >> 8) as u8;
-                out_buffer[7] = b as u8;
-                out_buffer[8] = (c >> 24) as u8;
-                out_buffer[9] = (c >> 16) as u8;
-                out_buffer[10] = (c >> 8) as u8;
-                out_buffer[11] = c as u8;
-                out_buffer[12] = (d >> 24) as u8;
-                out_buffer[13] = (d >> 16) as u8;
-                out_buffer[14] = (d >> 8) as u8;
-                out_buffer[15] = d as u8;
-                fo.write(&out_buffer);
+                let key = ((a as u128) << 96) | ((b as u128) << 64) | ((c as u128) << 32) | (d as u128);
+                println!("\n-> A {:#034X}", key);
+                let imkeys = make_imkeys(key);
+                let mut ek = [0u32; 56];
+                // Setting up A
+                make_ekeys(imkeys, 56, &mut ek);
+                // Setting up C
+                let t128 = key ^ h;
+                println!("-> C {:#034X}", t128);
+                let a = (t128 >> 96) as u32;
+                let b = (t128 >> 64) as u32;
+                let c = (t128 >> 32) as u32;
+                let d = t128 as u32;
+                let (a, b, c, d) = crypt_block(a, b, c, d, &ek);
+                // Setting up B
+                let o128 = ((a as u128) << 96) | ((b as u128) << 64) | ((c as u128) << 32) | (d as u128);
+                println!("-> B {:#034X}", o128);
+                h = o128 ^ t128;
+                println!("-> h {:#034X}", h);
             }
         }
     }
+    h
 }

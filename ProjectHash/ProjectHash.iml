@@ -7,7 +7,7 @@
       <sourceFolder url="file://$MODULE_DIR$/../ProjectHash\examples" isTestSource="false" />
       <sourceFolder url="file://$MODULE_DIR$/../ProjectHash\tests" isTestSource="true" />
       <sourceFolder url="file://$MODULE_DIR$/../ProjectHash\benches" isTestSource="true" />
-      <excludeFolder url="file://$MODULE_DIR$/../ProjectHash\target" />
+      <excludeFolder url="file://$MODULE_DIR$/target" />
     </content>
     <orderEntry type="inheritedJdk" />
     <orderEntry type="sourceFolder" forTests="false" />
