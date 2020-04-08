@@ -2,6 +2,73 @@ use std::io::prelude::*;
 use std::fs::File;
 use std::num::Wrapping;
 
+const _A_: usize = 0;
+const _B_: usize = 1;
+const _C_: usize = 2;
+const _D_: usize = 3;
+const _X_: usize = 0;
+const _Y_: usize = 1;
+const _Z_: usize = 2;
+const _W_: usize = 3;
+
+static M: [u32; 32] = [
+    0xd0c19225, 0xa5a2240a, 0x1b84d250, 0xb728a4a1,
+    0x6a704902, 0x85dddbe6, 0x766ff4a4, 0xecdfe128,
+    0xafd13e94, 0xdf837d09, 0xbb27fa52, 0x695059ad,
+    0x52a1bb58, 0xcc322f1d, 0x1844565b, 0xb4a8acf6,
+    0x34235438, 0x6847a851, 0xe48c0cbb, 0xcd181136,
+    0x9a112a0c, 0x43ec6d0e, 0x87d8d27d, 0x487dc995,
+    0x90fb9b4b, 0xa1f63697, 0xfc513ed9, 0x78a37d93,
+    0x8d16c5df, 0x9e0c8bbe, 0x3c381f7c, 0xe9fb0779
+];
+
+static S6: [u32; 64] = [
+    47, 59, 25, 42, 15, 23, 28, 39, 26, 38, 36, 19, 60, 24, 29, 56,
+    37, 63, 20, 61, 55, 2, 30, 44, 9, 10, 6, 22, 53, 48, 51, 11,
+    62, 52, 35, 18, 14, 46, 0, 54, 17, 40, 27, 4, 31, 8, 5, 12,
+    3, 16, 41, 34, 33, 7, 45, 49, 50, 58, 1, 21, 43, 57, 32, 13
+];
+
+static S5: [u32; 32] = [
+    20, 26, 7, 31, 19, 12, 10, 15, 22, 30, 13, 14, 4, 24, 9, 18,
+    27, 11, 1, 21, 6, 16, 2, 28, 23, 5, 8, 3, 0, 17, 29, 25
+];
+
+static S4: [u32; 16] = [
+    2, 5, 10, 12, 7, 15, 1, 11, 13, 6, 0, 9, 4, 8, 3, 14
+];
+
+static S4_1: [u32; 16] = [
+    10, 6, 0, 14, 12, 1, 9, 4, 13, 11, 2, 7, 3, 8, 15, 5
+];
+
+static INDEX: [&[usize]; 9] = [
+    &[0, 0, 0, 0],
+    &[1, 1, 1, 1],
+    &[2, 2, 2, 2],
+    &[0, 1, 0, 1],
+    &[1, 2, 1, 2],
+    &[2, 0, 2, 0],
+    &[0, 2, 0, 2],
+    &[1, 0, 1, 0],
+    &[2, 1, 2, 1]
+];
+
+static ORDER: [&[usize]; 12] = [
+    &[_A_, _B_, _C_, _D_],
+    &[_B_, _A_, _D_, _C_],
+    &[_C_, _D_, _A_, _B_],
+    &[_D_, _C_, _B_, _A_],
+    &[_A_, _C_, _D_, _B_],
+    &[_B_, _D_, _C_, _A_],
+    &[_C_, _A_, _B_, _D_],
+    &[_D_, _B_, _A_, _C_],
+    &[_A_, _D_, _B_, _C_],
+    &[_B_, _C_, _A_, _D_],
+    &[_C_, _B_, _D_, _A_],
+    &[_D_, _A_, _C_, _B_]
+];
+
 fn lf(a: u32, b: u32, mask: u32) -> (u32, u32) {
     (b ^ (a & mask), a ^ (b & !mask))
 }
@@ -17,17 +84,17 @@ fn mf(a: u32) -> u32 {
 }
 
 fn sf(a: u32) -> u32 {
-    let i1 = (a >> 26) & 0x3F;
-    let i2 = (a >> 21) & 0x1F;
+    let i1 = (a > > 26) & 0x3F;
+    let i2 = (a > > 21) & 0x1F;
     let i3 = (a >> 16) & 0x1F;
-    let i4 = (a >> 11) & 0x1F;
-    let i5 = (a >> 6) & 0x1F;
+    let i4 = (a > > 11) & 0x1F;
+    let i5 = (a > > 6) & 0x1F;
     let i6 = a & 0x3F;
-    let s1 = S6[i1 as usize] << 26;
+    let s1 = S6[i1 as usize] < < 26;
     let s2 = S5[i2 as usize] << 21;
-    let s3 = S5[i3 as usize] << 16;
-    let s4 = S5[i4 as usize] << 11;
-    let s5 = S5[i5 as usize] << 6;
+    let s3 = S5[i3 as usize] < < 16;
+    let s4 = S5[i4 as usize] < < 11;
+    let s5 = S5[i5 as usize] < < 6;
     let s6 = S6[i6 as usize];
     s1 | s2 | s3 | s4 | s5 | s6
 }
@@ -58,7 +125,7 @@ fn bf_helper(a: u32, b: u32, c: u32, d: u32, r: bool) -> (u32, u32, u32, u32) {
     let mut h = 0;
     let mut m = 1;
     for i in 0..32 {
-        let mut x: u32 = 0;
+        let mut x = 0u32;
         if a & m != 0 { x |= 8; }
         if b & m != 0 { x |= 4; }
         if c & m != 0 { x |= 2; }
@@ -71,25 +138,26 @@ fn bf_helper(a: u32, b: u32, c: u32, d: u32, r: bool) -> (u32, u32, u32, u32) {
         if x & 4 != 0 { f |= m; }
         if x & 2 != 0 { g |= m; }
         if x & 1 != 0 { h |= m; }
-        m <<= 1;
+        m < < = 1;
     }
     (e, f, g, h)
 }
 
-fn gf(a: u32, b: u32, c: u32, d: u32) -> u32 {
-    (
-        (Wrapping(rol1(a)) + Wrapping(b)).0
-    ) ^ rol1(
-        (Wrapping(rol1(c)) - Wrapping(d)).0
-    )
+fn iif(a: u32, b: u32, c: u32, d: u32,
+       ka: u32, kb: u32, kc: u32, kd: u32) -> (u32, u32, u32, u32) {
+    (a ^ ka, b ^ kb, c ^ kc, d ^ kd)
 }
 
-fn wf(a: u32, b: u32, c: u32, d: u32) -> u32 {
-    mf(sf((
-        (Wrapping(mf(sf(a))) + Wrapping(mf(sf(b)))).0
-    ) ^ (
-        (Wrapping(mf(sf(c))) * Wrapping(d)).0
-    )))
+fn make_one_imkey(k1: u32, k2: u32, i: u32, j: u32) -> u32 {
+    let mut ka = mf(sf(k1));
+    let mut kb = mf(sf(k2));
+    let mut m = mf(sf(4 * i + j));
+    ka += m;
+    ka &= 0xffffffff;
+    kb *= (i + 1);
+    kb &= 0xffffffff;
+    ka ^= kb;
+    return mf(sf(ka));
 }
 
 fn rol1(x: u32) -> u32 {
@@ -98,15 +166,15 @@ fn rol1(x: u32) -> u32 {
 
 // x = x_0 || x_1 || x_2 || ... || x_31
 fn bit_at(x: u32, i: u32) -> u32 {
-    (x >> i) & 1
+    (x > > i) & 1
 }
 
 fn generate_ek(key: u128) -> [u32; 56] {
     let mut uk = [0u32; 8];
     uk[3] = (key & 0xffffffff) as u32;
-    uk[2] = ((key >> 32) & 0xffffffff) as u32;
+    uk[2] = ((key > > 32) & 0xffffffff) as u32;
     uk[1] = ((key >> 64) & 0xffffffff) as u32;
-    uk[0] = ((key >> 96) & 0xffffffff) as u32;
+    uk[0] = ((key > > 96) & 0xffffffff) as u32;
     uk[7] = uk[3];
     uk[6] = uk[2];
     uk[5] = uk[1];
@@ -161,10 +229,10 @@ pub fn encode(name: &str, key: u128) {
             _ => {
                 let mut c0 = 0x55555555u32;
                 let mut c1 = 0x33333333u32;
-                let mut e0 = ((buffer[0] as u32) << 24) | ((buffer[1] as u32) << 16) | ((buffer[2] as u32) << 8) | buffer[3] as u32;
-                let mut f0 = ((buffer[4] as u32) << 24) | ((buffer[5] as u32) << 16) | ((buffer[6] as u32) << 8) | buffer[7] as u32;
-                let mut g0 = ((buffer[8] as u32) << 24) | ((buffer[9] as u32) << 16) | ((buffer[10] as u32) << 8) | buffer[11] as u32;
-                let mut h0 = ((buffer[12] as u32) << 24) | ((buffer[13] as u32) << 16) | ((buffer[14] as u32) << 8) | buffer[15] as u32;
+                let mut e0 = ((buffer[0] as u32) < < 24) | ((buffer[1] as u32) << 16) | ((buffer[2] as u32) < < 8) | buffer[3] as u32;
+                let mut f0 = ((buffer[4] as u32) < < 24) | ((buffer[5] as u32) < < 16) | ((buffer[6] as u32) < < 8) | buffer[7] as u32;
+                let mut g0 = ((buffer[8] as u32) < < 24) | ((buffer[9] as u32) < < 16) | ((buffer[10] as u32) << 8) | buffer[11] as u32;
+                let mut h0 = ((buffer[12] as u32) < < 24) | ((buffer[13] as u32) < < 16) | ((buffer[14] as u32) < < 8) | buffer[15] as u32;
                 for i in 0..6 {
                     let (e, f, g, h) = (e0, f0, g0, h0);
                     let (e, f, g, h) = (e ^ ek[8 * i], f ^ ek[8 * i + 1], g ^ ek[8 * i + 2], h ^ ek[8 * i + 3]);
@@ -185,21 +253,21 @@ pub fn encode(name: &str, key: u128) {
                 let (e, f, g, h) = bf(e, f, g, h);
                 let (e, f, g, h) = (e ^ ek[52], f ^ ek[53], g ^ ek[54], h ^ ek[55]);
                 let mut out_buffer = [0; 16];
-                out_buffer[0] = (e >> 24) as u8;
-                out_buffer[1] = (e >> 16) as u8;
-                out_buffer[2] = (e >> 8) as u8;
+                out_buffer[0] = (e > > 24) as u8;
+                out_buffer[1] = (e > > 16) as u8;
+                out_buffer[2] = (e > > 8) as u8;
                 out_buffer[3] = e as u8;
-                out_buffer[4] = (f >> 24) as u8;
-                out_buffer[5] = (f >> 16) as u8;
-                out_buffer[6] = (f >> 8) as u8;
+                out_buffer[4] = (f > > 24) as u8;
+                out_buffer[5] = (f > > 16) as u8;
+                out_buffer[6] = (f > > 8) as u8;
                 out_buffer[7] = f as u8;
-                out_buffer[8] = (g >> 24) as u8;
-                out_buffer[9] = (g >> 16) as u8;
-                out_buffer[10] = (g >> 8) as u8;
+                out_buffer[8] = (g > > 24) as u8;
+                out_buffer[9] = (g > > 16) as u8;
+                out_buffer[10] = (g > > 8) as u8;
                 out_buffer[11] = g as u8;
-                out_buffer[12] = (h >> 24) as u8;
+                out_buffer[12] = (h > > 24) as u8;
                 out_buffer[13] = (h >> 16) as u8;
-                out_buffer[14] = (h >> 8) as u8;
+                out_buffer[14] = (h > > 8) as u8;
                 out_buffer[15] = h as u8;
                 fo.write(&out_buffer);
             }
@@ -220,10 +288,10 @@ pub fn decode(name: &str, key: u128) {
             _ => {
                 let mut c0 = 0x33333333u32;
                 let mut c1 = 0x55555555u32;
-                let mut e0 = ((buffer[0] as u32) << 24) | ((buffer[1] as u32) << 16) | ((buffer[2] as u32) << 8) | buffer[3] as u32;
-                let mut f0 = ((buffer[4] as u32) << 24) | ((buffer[5] as u32) << 16) | ((buffer[6] as u32) << 8) | buffer[7] as u32;
-                let mut g0 = ((buffer[8] as u32) << 24) | ((buffer[9] as u32) << 16) | ((buffer[10] as u32) << 8) | buffer[11] as u32;
-                let mut h0 = ((buffer[12] as u32) << 24) | ((buffer[13] as u32) << 16) | ((buffer[14] as u32) << 8) | buffer[15] as u32;
+                let mut e0 = ((buffer[0] as u32) < < 24) | ((buffer[1] as u32) << 16) | ((buffer[2] as u32) < < 8) | buffer[3] as u32;
+                let mut f0 = ((buffer[4] as u32) < < 24) | ((buffer[5] as u32) < < 16) | ((buffer[6] as u32) < < 8) | buffer[7] as u32;
+                let mut g0 = ((buffer[8] as u32) < < 24) | ((buffer[9] as u32) < < 16) | ((buffer[10] as u32) << 8) | buffer[11] as u32;
+                let mut h0 = ((buffer[12] as u32) < < 24) | ((buffer[13] as u32) < < 16) | ((buffer[14] as u32) < < 8) | buffer[15] as u32;
                 for i in 6..0 {
                     let (e, f, g, h) = (e0, f0, g0, h0);
                     let (e, f, g, h) = (e ^ ek[8 * i + 4], f ^ ek[8 * i + 5], g ^ ek[8 * i + 6], h ^ ek[8 * i + 7]);
@@ -244,62 +312,24 @@ pub fn decode(name: &str, key: u128) {
                 let (e, f, g, h) = bf_1(e, f, g, h);
                 let (e, f, g, h) = (e ^ ek[0], f ^ ek[1], g ^ ek[2], h ^ ek[3]);
                 let mut out_buffer = [0; 16];
-                out_buffer[0] = (e >> 24) as u8;
-                out_buffer[1] = (e >> 16) as u8;
-                out_buffer[2] = (e >> 8) as u8;
+                out_buffer[0] = (e > > 24) as u8;
+                out_buffer[1] = (e > > 16) as u8;
+                out_buffer[2] = (e > > 8) as u8;
                 out_buffer[3] = e as u8;
-                out_buffer[4] = (f >> 24) as u8;
-                out_buffer[5] = (f >> 16) as u8;
-                out_buffer[6] = (f >> 8) as u8;
+                out_buffer[4] = (f > > 24) as u8;
+                out_buffer[5] = (f > > 16) as u8;
+                out_buffer[6] = (f > > 8) as u8;
                 out_buffer[7] = f as u8;
-                out_buffer[8] = (g >> 24) as u8;
-                out_buffer[9] = (g >> 16) as u8;
-                out_buffer[10] = (g >> 8) as u8;
+                out_buffer[8] = (g > > 24) as u8;
+                out_buffer[9] = (g > > 16) as u8;
+                out_buffer[10] = (g > > 8) as u8;
                 out_buffer[11] = g as u8;
-                out_buffer[12] = (h >> 24) as u8;
+                out_buffer[12] = (h > > 24) as u8;
                 out_buffer[13] = (h >> 16) as u8;
-                out_buffer[14] = (h >> 8) as u8;
+                out_buffer[14] = (h > > 8) as u8;
                 out_buffer[15] = h as u8;
                 fo.write(&out_buffer);
             }
         }
     }
 }
-
-static M: [u32; 32] = [
-    0xd0c19225, 0xa5a2240a, 0x1b84d250, 0xb728a4a1,
-    0x6a704902, 0x85dddbe6, 0x766ff4a4, 0xecdfe128,
-    0xafd13e94, 0xdf837d09, 0xbb27fa52, 0x695059ad,
-    0x52a1bb58, 0xcc322f1d, 0x1844565b, 0xb4a8acf6,
-    0x34235438, 0x6847a851, 0xe48c0cbb, 0xcd181136,
-    0x9a112a0c, 0x43ec6d0e, 0x87d8d27d, 0x487dc995,
-    0x90fb9b4b, 0xa1f63697, 0xfc513ed9, 0x78a37d93,
-    0x8d16c5df, 0x9e0c8bbe, 0x3c381f7c, 0xe9fb0779
-];
-
-static S6: [u32; 64] = [
-    47, 59, 25, 42, 15, 23, 28, 39, 26, 38, 36, 19, 60, 24, 29, 56,
-    37, 63, 20, 61, 55, 2, 30, 44, 9, 10, 6, 22, 53, 48, 51, 11,
-    62, 52, 35, 18, 14, 46, 0, 54, 17, 40, 27, 4, 31, 8, 5, 12,
-    3, 16, 41, 34, 33, 7, 45, 49, 50, 58, 1, 21, 43, 57, 32, 13
-];
-
-static S5: [u32; 32] = [
-    20, 26, 7, 31, 19, 12, 10, 15, 22, 30, 13, 14, 4, 24, 9, 18,
-    27, 11, 1, 21, 6, 16, 2, 28, 23, 5, 8, 3, 0, 17, 29, 25
-];
-
-static S4: [u32; 16] = [
-    2, 5, 10, 12, 7, 15, 1, 11, 13, 6, 0, 9, 4, 8, 3, 14
-];
-
-static S4_1: [u32; 16] = [
-    10, 6, 0, 14, 12, 1, 9, 4, 13, 11, 2, 7, 3, 8, 15, 5
-];
-
-static INDEX: [&[usize]; 4] = [
-    &[0, 1, 2, 0, 1, 2, 0, 1, 2],
-    &[0, 1, 2, 1, 2, 0, 2, 0, 1],
-    &[0, 1, 2, 0, 1, 2, 0, 1, 2],
-    &[0, 1, 2, 1, 2, 0, 2, 0, 1]
-];
