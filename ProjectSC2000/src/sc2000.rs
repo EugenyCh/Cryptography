@@ -305,14 +305,21 @@ pub fn crypt(name: &str, key: u128) {
     let mut ek = [0u32; 56];
     make_ekeys(imkeys, 56, &mut ek);
     let mut f = File::open(name).unwrap();
+    let size = f.metadata().unwrap().len();
     let mut fo = File::create(format!("./crypted-{}", name)).unwrap();
     let mut buffer = [0; 16];
+    let shift_buffer = [(size % 16) as u8];
+    fo.write(&shift_buffer);
     loop {
         let n = f.read(&mut buffer[..]).unwrap();
         match n {
             0 => break,
-            1..=15 => (),
-            _ => {
+            sz => {
+                if sz < 16 {
+                    for i in sz..16 {
+                        buffer[i] = 0u8;
+                    }
+                }
                 let a = ((buffer[0] as u32) << 24) | ((buffer[1] as u32) << 16) | ((buffer[2] as u32) << 8) | buffer[3] as u32;
                 let b = ((buffer[4] as u32) << 24) | ((buffer[5] as u32) << 16) | ((buffer[6] as u32) << 8) | buffer[7] as u32;
                 let c = ((buffer[8] as u32) << 24) | ((buffer[9] as u32) << 16) | ((buffer[10] as u32) << 8) | buffer[11] as u32;
@@ -346,13 +353,17 @@ pub fn decrypt(name: &str, key: u128) {
     let mut ek = [0u32; 56];
     make_ekeys(imkeys, 56, &mut ek);
     let mut f = File::open(name).unwrap();
+    let mut sz = f.metadata().unwrap().len();
     let mut fo = File::create(format!("./decrypted-{}", name)).unwrap();
     let mut buffer = [0; 16];
+    let mut shift_buffer = [0u8];
+    f.read(&mut shift_buffer[..]).unwrap();
+    let shift = shift_buffer[0] as usize;
+    sz -= 1;
     loop {
         let n = f.read(&mut buffer[..]).unwrap();
         match n {
             0 => break,
-            1..=15 => (),
             _ => {
                 let a = ((buffer[0] as u32) << 24) | ((buffer[1] as u32) << 16) | ((buffer[2] as u32) << 8) | buffer[3] as u32;
                 let b = ((buffer[4] as u32) << 24) | ((buffer[5] as u32) << 16) | ((buffer[6] as u32) << 8) | buffer[7] as u32;
@@ -376,8 +387,14 @@ pub fn decrypt(name: &str, key: u128) {
                 out_buffer[13] = (d >> 16) as u8;
                 out_buffer[14] = (d >> 8) as u8;
                 out_buffer[15] = d as u8;
-                fo.write(&out_buffer);
+                if sz == 16 && shift > 0 {
+                    fo.write(&out_buffer[0..shift]);
+                }
+                else {
+                    fo.write(&out_buffer);
+                }
             }
         }
+        sz -= 16;
     }
 }
