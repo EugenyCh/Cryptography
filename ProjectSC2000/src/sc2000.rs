@@ -130,7 +130,7 @@ fn bf_helper(a: u32, b: u32, c: u32, d: u32, r: bool) -> (u32, u32, u32, u32) {
     let mut g = 0;
     let mut h = 0;
     let mut m = 1;
-    for i in 0..32 {
+    for _ in 0..32 {
         let mut x = 0u32;
         if a & m != 0 { x |= 8; }
         if b & m != 0 { x |= 4; }
@@ -157,7 +157,7 @@ fn iif(a: u32, b: u32, c: u32, d: u32,
 fn make_one_imkey(k1: u32, k2: u32, i: u32, j: u32) -> u32 {
     let mut ka = mf(sf(k1));
     let mut kb = mf(sf(k2));
-    let mut m = mf(sf(4 * i + j));
+    let m = mf(sf(4 * i + j));
     ka = (Wrapping(ka) + Wrapping(m)).0;
     ka &= 0xffffffff;
     kb = (Wrapping(kb) * Wrapping(i + 1)).0;
@@ -190,9 +190,9 @@ fn make_one_ekey(imkey: [[u32; 3]; 4], t: u32, s: u32) -> u32 {
     let t = t as usize;
     let s = s as usize;
     let mut x = imkey[ORDER[t][_X_]][INDEX[s][_X_]];
-    let mut y = imkey[ORDER[t][_Y_]][INDEX[s][_Y_]];
+    let y = imkey[ORDER[t][_Y_]][INDEX[s][_Y_]];
     let mut z = imkey[ORDER[t][_Z_]][INDEX[s][_Z_]];
-    let mut w = imkey[ORDER[t][_W_]][INDEX[s][_W_]];
+    let w = imkey[ORDER[t][_W_]][INDEX[s][_W_]];
     x = rol1(x);
     x = (Wrapping(x) + Wrapping(y)).0;
     x &= 0xffffffff;
@@ -309,7 +309,7 @@ pub fn crypt(name: &str, key: u128) {
     let mut fo = File::create(format!("./crypted-{}", name)).unwrap();
     let mut buffer = [0; 16];
     let shift_buffer = [(size % 16) as u8];
-    fo.write(&shift_buffer);
+    fo.write(&shift_buffer).unwrap();
     loop {
         let n = f.read(&mut buffer[..]).unwrap();
         match n {
@@ -342,7 +342,7 @@ pub fn crypt(name: &str, key: u128) {
                 out_buffer[13] = (d >> 16) as u8;
                 out_buffer[14] = (d >> 8) as u8;
                 out_buffer[15] = d as u8;
-                fo.write(&out_buffer);
+                fo.write(&out_buffer).unwrap();
             }
         }
     }
@@ -388,10 +388,10 @@ pub fn decrypt(name: &str, key: u128) {
                 out_buffer[14] = (d >> 8) as u8;
                 out_buffer[15] = d as u8;
                 if sz == 16 && shift > 0 {
-                    fo.write(&out_buffer[0..shift]);
+                    fo.write(&out_buffer[0..shift]).unwrap();
                 }
                 else {
-                    fo.write(&out_buffer);
+                    fo.write(&out_buffer).unwrap();
                 }
             }
         }
