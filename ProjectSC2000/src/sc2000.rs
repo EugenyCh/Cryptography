@@ -69,6 +69,10 @@ static ORDER: [[usize; 4]; 12] = [
     [_D_, _A_, _C_, _B_]
 ];
 
+fn rol1(x: u32) -> u32 {
+    x.rotate_left(1)
+}
+
 fn lf(a: u32, b: u32, mask: u32) -> (u32, u32) {
     (b ^ (a & mask), a ^ (b & !mask))
 }
@@ -154,10 +158,8 @@ fn make_one_imkey(k1: u32, k2: u32, i: u32, j: u32) -> u32 {
     let mut ka = mf(sf(k1));
     let mut kb = mf(sf(k2));
     let mut m = mf(sf(4 * i + j));
-    //ka += m;
     ka = (Wrapping(ka) + Wrapping(m)).0;
     ka &= 0xffffffff;
-    //kb *= (i + 1);
     kb = (Wrapping(kb) * Wrapping(i + 1)).0;
     kb &= 0xffffffff;
     ka ^= kb;
@@ -185,55 +187,31 @@ fn make_imkeys(ukey: [u32; 8]) -> [[u32; 3]; 4]
     imkey
 }
 
-fn rol1(x: u32) -> u32 {
-    x.rotate_left(1)
+fn make_one_ekey(imkey: [[u32; 3]; 4], t: u32, s: u32) -> u32
+{
+    let mut x = imkey[ORDER[t][_X_]][ORDER[s][_X_]];
+    let mut y = imkey[ORDER[t][_Y_]][ORDER[s][_Y_]];
+    let mut z = imkey[ORDER[t][_Z_]][ORDER[s][_Z_]];
+    let mut w = imkey[ORDER[t][_W_]][ORDER[s][_W_]];
+    x = rol1(x);
+    x = (Wrapping(x) + Wrapping(y)).0;
+    x &= 0xffffffff;
+    z = rol1(z);
+    z = (Wrapping(z) - Wrapping(w)).0;
+    z &= 0xffffffff;
+    z = rol1(z);
+    x ^= z;
+    return x;
 }
 
-fn generate_ek(key: u128) -> [u32; 56] {
-    let mut uk = [0u32; 8];
-    uk[3] = (key & 0xffffffff) as u32;
-    uk[2] = ((key >> 32) & 0xffffffff) as u32;
-    uk[1] = ((key >> 64) & 0xffffffff) as u32;
-    uk[0] = ((key >> 96) & 0xffffffff) as u32;
-    uk[7] = uk[3];
-    uk[6] = uk[2];
-    uk[5] = uk[1];
-    uk[4] = uk[0];
-    let mut aa = [0u32; 3];
-    let mut bb = [0u32; 3];
-    let mut cc = [0u32; 3];
-    let mut dd = [0u32; 3];
-    for i in 0..3 {
-        aa[i as usize] = wf(4 * i, uk[0], uk[1], i + 1);
-        bb[i as usize] = wf(4 * i + 1, uk[2], uk[3], i + 1);
-        cc[i as usize] = wf(4 * i + 2, uk[4], uk[5], i + 1);
-        dd[i as usize] = wf(4 * i + 3, uk[6], uk[7], i + 1);
+fn make_ekeys(imkey: [[u32; 3]; 4], num_ekey: u32, ekey: &mut [u32])
+{
+    for n in 0..num_ekey
+    {
+        let t = (n + (n / 36)) % 12;
+        let s = n % 9;
+        ekey[n] = make_one_ekey(imkey, t, s);
     }
-    let mut ek = [0u32; 56];
-    for n in 0..56 {
-        let u = n % 9;
-        let v = (n + n / 36) % 12;
-        let x = INDEX[0][u];
-        let y = INDEX[1][u];
-        let z = INDEX[2][u];
-        let w = INDEX[3][u];
-        match v {
-            0 => ek[n] = gf(aa[x], bb[y], cc[z], dd[w]),
-            1 => ek[n] = gf(bb[x], aa[y], dd[z], cc[w]),
-            2 => ek[n] = gf(cc[x], dd[y], aa[z], bb[w]),
-            3 => ek[n] = gf(dd[x], cc[y], bb[z], aa[w]),
-            4 => ek[n] = gf(aa[x], cc[y], dd[z], bb[w]),
-            5 => ek[n] = gf(bb[x], dd[y], cc[z], aa[w]),
-            6 => ek[n] = gf(cc[x], aa[y], bb[z], dd[w]),
-            7 => ek[n] = gf(dd[x], bb[y], aa[z], cc[w]),
-            8 => ek[n] = gf(aa[x], dd[y], bb[z], cc[w]),
-            9 => ek[n] = gf(bb[x], cc[y], aa[z], dd[w]),
-            10 => ek[n] = gf(cc[x], bb[y], dd[z], aa[w]),
-            11 => ek[n] = gf(dd[x], aa[y], cc[z], bb[w]),
-            _ => {}
-        }
-    }
-    ek
 }
 
 pub fn encode(name: &str, key: u128) {
