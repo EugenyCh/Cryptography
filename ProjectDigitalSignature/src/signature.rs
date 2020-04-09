@@ -7,30 +7,40 @@ fn modpow(b: &BigInt, e: &BigInt, m: &BigInt) -> BigInt {
     b.modpow(&e, &m)
 }
 
-pub fn signature(h: &BigInt) -> (BigInt, BigInt, BigInt) {
+pub fn signature(h: &BigInt) -> bool {
     let p = BigInt::parse_bytes(b"255211775190703847597530955573826158579", 10).unwrap();
     let q = BigInt::parse_bytes(b"252991020016994668398330411224101", 10).unwrap();
-    let g = modpow(&BigInt::from(2), &((&p - 1) / &q), &p);
     let mut rng = rand::thread_rng();
-    let k = rng.gen_bigint_range(&BigInt::from(1), &(&q - 1));
-    let x = rng.gen_bigint_range(&BigInt::from(2), &(&q - 1));
-    let y = modpow(&g, &x, &p);
+    let gamma = rng.gen_bigint_range(&BigInt::from(2), &(&p - 1));
+    let g = modpow(&gamma, &((&p - 1) / &q), &p);
+    let k = rng.gen_bigint_range(&BigInt::from(1), &q);
     let r = modpow(&g, &k, &p);
-    let rho = modpow(&r, &BigInt::from(1), &q);
-    let s = modpow(&(&(&rho * h + &x) / &k), &BigInt::from(1), &q);
-    (r, s, y)
-}
+    let rho = &r % &q;
+    let mut x = BigInt::from(2);
+    while (&k - &rho * h) % &x != BigInt::from(0) {
+        x += 1;
+    }
+    let y = modpow(&g, &x, &p);
+    let mut s: BigInt;
+    if &k > &(&rho * h) {
+        s = &(&(&k - &rho * h) / &x) % &q;
+    } else {
+        s = &(&(&(&k - &rho * h) / &x) + &q * &(&(&rho * h - &k) / &x)) % &q;
+    }
+    println!("gamma\n = {}", gamma);
+    println!("g\n = {}", g);
+    println!("k\n = {}", k);
+    println!("r\n = {}", r);
+    println!("rho\n = {}", rho);
+    println!("x\n = {}", x);
+    println!("y\n = {}", y);
+    println!("s\n = {}", s);
 
-pub fn check_signature(h: &BigInt, r: &BigInt, s: &BigInt, y: &BigInt) -> bool {
-    let p = BigInt::parse_bytes(b"255211775190703847597530955573826158579", 10).unwrap();
-    let q = BigInt::parse_bytes(b"252991020016994668398330411224101", 10).unwrap();
-    let g = modpow(&BigInt::from(2), &((&p - 1) / &q), &p);
-    let rho = modpow(r, &BigInt::from(1), &q);
-    let x1 = modpow(r, s, &q);
-    let x2 = modpow(
-        &(&modpow(&g, &(&rho * h), &q)
-            * &modpow(y, &BigInt::from(1), &q)),
-        &BigInt::from(1), &q);
+    // Checking
+    let x1 = &r % &p;
+    let x2 = &(
+        modpow(&g, &(&rho * h), &p) * modpow(&y, &s, &p)
+    ) % &p;
     println!("x1 = {}", x1);
     println!("x2 = {}", x2);
     x1 == x2
